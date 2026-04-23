@@ -1359,7 +1359,7 @@ html,body{
             <div class="tag-row">
               <span class="plate">Rally Plate</span>
               <span>&middot; Est. 2026</span>
-              <span>&middot; 10 Stages</span>
+              <span>&middot; 11 Stages</span>
             </div>
             <h1 class="brand">Parking <span class="zen">Zen</span></h1>
             <p class="tagline">Nail the spot. No rush.</p>
@@ -2452,8 +2452,8 @@ const LEVELS = [
       { x: 960, y: 590, angle: Math.PI/2, color: '#a058e0' }
     ],
     traffic: [
-      { x: 1100, y: 200, angle: Math.PI, speed: 50, path: 'horizontal-top', lane: 'top', color: '#d83a58' },
-      { x: 180,  y: 530, angle: 0,       speed: 55, path: 'horizontal-bot', lane: 'bot', color: '#e8e3d5' }
+      { x: 1100, y: 200, angle: Math.PI, speed: 50, color: '#d83a58' },
+      { x: 180,  y: 530, angle: 0,       speed: 55, color: '#e8e3d5' }
     ],
     player: { x: 100, y: 590, angle: 0 },
     target: { x: 1060, y: 590, angle: Math.PI/2 }
@@ -2509,6 +2509,42 @@ const LEVELS = [
     traffic: [],
     player: { x: 640, y: 360, angle: 0 },
     target: { x: 200, y: 180, angle: -Math.PI/2 }
+  },
+
+  // -------- Level 11: Night Shift (darkness + headlights) --------
+  {
+    id: 11,
+    name: 'Night Shift',
+    desc: 'After hours \u00b7 Headlights only',
+    tip: 'Follow the beacon. What you can\u2019t see is still there.',
+    targetTime: 28,
+    world: { w: 1280, h: 720 },
+    night: true,
+    grass: [{ x:0, y:0, w:1280, h:70 }, { x:0, y:650, w:1280, h:70 }],
+    markings: {
+      centerDashed: { x1:0, y1:410, x2:1280, y2:410 },
+      laneEdges: [{ x1:0,y1:110,x2:1280,y2:110 }, { x1:0,y1:610,x2:1280,y2:610 }]
+    },
+    parkingSpots: [
+      { x: 380, y: 190, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 470, y: 190, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 560, y: 190, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 650, y: 190, w: 60, h: 96, angle: -Math.PI/2, target: true },
+      { x: 740, y: 190, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 830, y: 190, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 920, y: 190, w: 56, h: 96, angle: -Math.PI/2 }
+    ],
+    parkedCars: [
+      { x: 380, y: 190, angle: -Math.PI/2, color: '#4a90e2' },
+      { x: 470, y: 190, angle: -Math.PI/2, color: '#ff8c42' },
+      { x: 740, y: 190, angle: -Math.PI/2, color: '#2f9f6c' },
+      { x: 830, y: 190, angle: -Math.PI/2, color: '#a058e0' }
+    ],
+    traffic: [
+      { x: 800, y: 480, angle: Math.PI, speed: 45, color: '#d83a58' }
+    ],
+    player: { x: 120, y: 540, angle: 0 },
+    target: { x: 650, y: 190, angle: -Math.PI/2 }
   }
 ];
 
@@ -3014,8 +3050,8 @@ const UI = (function(){
     { id:'g30', name:'Kai Nakamura',    flag:'\uD83C\uDDEF\uD83C\uDDF5', initials:'KN', country:'Fukuoka' }
   ];
   // Per-stage base (fastest) + spread (slowest-fastest). Tuned against level target times.
-  const LB_BASES   = { 1: 10.12, 2: 20.14, 3: 32.45, 4: 44.12, 5: 41.12, 6: 31.22, 7: 14.88, 8: 23.45, 9: 28.90, 10: 48.65 };
-  const LB_SPREADS = { 1:  7.33, 2: 12.44, 3: 22.67, 4: 24.80, 5: 21.36, 6: 18.55, 7: 11.22, 8: 14.80, 9: 19.40, 10: 26.15 };
+  const LB_BASES   = { 1: 10.12, 2: 20.14, 3: 32.45, 4: 44.12, 5: 41.12, 6: 31.22, 7: 14.88, 8: 23.45, 9: 28.90, 10: 48.65, 11: 26.78 };
+  const LB_SPREADS = { 1:  7.33, 2: 12.44, 3: 22.67, 4: 24.80, 5: 21.36, 6: 18.55, 7: 11.22, 8: 14.80, 9: 19.40, 10: 26.15, 11: 17.90 };
   const LB_FAKE_TOTAL = 12489; // Visual "global drivers" count
 
   function lbGhostTime(stageId, idx){
@@ -3891,9 +3927,70 @@ const Game = (function(){
         Renderer.drawPlayerHalo(ctx, player, nowSec);
         Car.draw(ctx, player);
       }
+
+      // Night mode overlay: blankets the world in darkness, then uses
+      // destination-out compositing to "cut" light shapes out of the
+      // overlay so the world underneath shows through. Three light sources:
+      //   1. Ambient glow around the player (so you can see your own car)
+      //   2. Headlight cone pointing in the direction you're facing
+      //   3. Target beacon (so navigation is possible on a dark map)
+      if(level.night && player){
+        drawNightOverlay(ctx, player, level);
+      }
     }
 
     ctx.restore();
+  }
+
+  function drawNightOverlay(c, p, lv){
+    const W = lv.world.w, H = lv.world.h;
+    c.save();
+    // Heavy dusk blanket.
+    c.fillStyle = 'rgba(8, 10, 20, 0.86)';
+    c.fillRect(0, 0, W, H);
+    // Erase mode: alpha = how strongly to reveal what's underneath.
+    c.globalCompositeOperation = 'destination-out';
+
+    // Ambient pool around the car.
+    const ambient = c.createRadialGradient(p.x, p.y, 6, p.x, p.y, 78);
+    ambient.addColorStop(0,    'rgba(0,0,0,1)');
+    ambient.addColorStop(0.65, 'rgba(0,0,0,0.55)');
+    ambient.addColorStop(1,    'rgba(0,0,0,0)');
+    c.fillStyle = ambient;
+    c.fillRect(p.x - 90, p.y - 90, 180, 180);
+
+    // Headlight cone: radial gradient anchored forward of the car,
+    // clipped to a wedge pointing along the car's angle.
+    const FWD = 90, REACH = 280, SPREAD = Math.PI / 3.2;
+    const hx = p.x + Math.cos(p.angle) * FWD;
+    const hy = p.y + Math.sin(p.angle) * FWD;
+    const head = c.createRadialGradient(p.x, p.y, 0, hx, hy, REACH);
+    head.addColorStop(0,    'rgba(0,0,0,1)');
+    head.addColorStop(0.55, 'rgba(0,0,0,0.7)');
+    head.addColorStop(1,    'rgba(0,0,0,0)');
+    c.save();
+    c.beginPath();
+    c.moveTo(p.x, p.y);
+    c.arc(p.x, p.y, REACH + 40, p.angle - SPREAD, p.angle + SPREAD);
+    c.closePath();
+    c.clip();
+    c.fillStyle = head;
+    c.fillRect(p.x - REACH - 40, p.y - REACH - 40, (REACH + 40) * 2, (REACH + 40) * 2);
+    c.restore();
+
+    // Target beacon: soft persistent glow so players can navigate on
+    // an otherwise pitch-black map.
+    const tg = lv.target;
+    if(tg){
+      const beacon = c.createRadialGradient(tg.x, tg.y, 0, tg.x, tg.y, 90);
+      beacon.addColorStop(0,    'rgba(0,0,0,0.75)');
+      beacon.addColorStop(0.55, 'rgba(0,0,0,0.4)');
+      beacon.addColorStop(1,    'rgba(0,0,0,0)');
+      c.fillStyle = beacon;
+      c.fillRect(tg.x - 100, tg.y - 100, 200, 200);
+    }
+
+    c.restore();
   }
 
   return { init };
