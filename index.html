@@ -595,6 +595,52 @@ html,body{
 }
 .result-plate.fail{ background:var(--blood) }
 
+/* Campaign Complete banner — only shown when the player wins the final level.
+   A grandiose farewell that makes ending the 12-stage campaign feel like a
+   moment, not just another "Next" button being grayed out. */
+.champ-banner{
+  padding:20px 18px 24px;
+  margin:0 -32px 18px;
+  background:var(--ink);
+  color:var(--bg);
+  border-bottom:2px solid var(--pink);
+  text-align:center;
+  animation: champFade 0.9s var(--ease-out) 0.1s backwards;
+}
+.champ-banner.hidden{ display:none }
+.champ-kicker{
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:0.4em;
+  color:var(--pink);
+  font-weight:600;
+  text-transform:uppercase;
+}
+.champ-title{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-size:clamp(56px, 12vw, 88px);
+  line-height:1;
+  letter-spacing:0.01em;
+  transform:skewX(var(--skew));
+  display:inline-block;
+  margin:10px 0 8px;
+  color:var(--bg);
+}
+.champ-title .dot{ color:var(--pink) }
+.champ-sub{
+  font-family:var(--font-body);
+  font-size:12px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:rgba(244,234,216,0.7);
+  font-weight:500;
+}
+@keyframes champFade {
+  from{ opacity:0; transform:translateY(-8px) }
+  to{ opacity:1; transform:translateY(0) }
+}
+
 .result-title{
   font-family:var(--font-display);
   font-style:italic;
@@ -1307,6 +1353,9 @@ html,body{
   .result-box{ padding:32px 18px 22px; box-shadow: 0 14px 32px rgba(26,20,16,0.3), 4px 4px 0 var(--ink) }
   .result-plate{ padding:5px 12px; font-size:10px }
   .result-title{ font-size:clamp(56px, 16vw, 72px) }
+  .champ-banner{ padding:16px 14px 18px; margin:0 -18px 14px }
+  .champ-kicker{ font-size:9px; letter-spacing:0.32em }
+  .champ-sub{ font-size:10px; letter-spacing:0.06em }
   .result-stats{ margin:20px -18px 0 }
   .stat{ padding:14px 4px }
   .stat .l{ font-size:8px; letter-spacing:0.2em }
@@ -1509,8 +1558,13 @@ html,body{
 
     <div class="screen hidden" id="win-screen">
       <div class="result-box">
+        <div class="champ-banner hidden" id="win-champ">
+          <div class="champ-kicker">Campaign</div>
+          <div class="champ-title">Champion<span class="dot">.</span></div>
+          <div class="champ-sub">You cleared every stage. That\u2019s it.</div>
+        </div>
         <div class="result-plate" id="win-plate">&#9733; Stage Complete &#9733;</div>
-        <h2 class="result-title">Parked<span class="dot">.</span></h2>
+        <h2 class="result-title" id="win-title">Parked<span class="dot">.</span></h2>
         <div class="stars-big" id="win-stars">
           <span class="star">&#9733;</span><span class="star">&#9733;</span><span class="star">&#9733;</span>
         </div>
@@ -2323,7 +2377,7 @@ const LEVELS = [
     parkedCars: [
       { x: 460, y: 135, angle: 0, color:'#a058e0' },
       { x: 820, y: 135, angle: 0, color:'#2f9f6c' },
-      { x: 300, y: 135, angle: 0, color:'#e8e3d5' },
+      { x: 300, y: 135, angle: 0, color:'#c9b892' },
       { x: 980, y: 135, angle: 0, color:'#ff7d42' }
     ],
     traffic: [
@@ -2364,7 +2418,7 @@ const LEVELS = [
     parkedCars: [
       { x: 560, y: 165, angle: -Math.PI/2, color:'#3478d8' },
       { x: 720, y: 165, angle: -Math.PI/2, color:'#d83a58' },
-      { x: 480, y: 165, angle: -Math.PI/2, color:'#e8e3d5' },
+      { x: 480, y: 165, angle: -Math.PI/2, color:'#c9b892' },
       { x: 800, y: 165, angle: -Math.PI/2, color:'#ff8c42' },
       { x: 320, y: 165, angle: -Math.PI/2, color:'#2f9f6c' },
       { x: 400, y: 165, angle: -Math.PI/2, color:'#a058e0' },
@@ -2456,7 +2510,7 @@ const LEVELS = [
       { x: 330,  y: 120, angle: -Math.PI/2, color: '#ff8c42' },
       { x: 540,  y: 120, angle: -Math.PI/2, color: '#2f9f6c' },
       { x: 750,  y: 120, angle: -Math.PI/2, color: '#a058e0' },
-      { x: 950,  y: 120, angle: -Math.PI/2, color: '#e8e3d5' },
+      { x: 950,  y: 120, angle: -Math.PI/2, color: '#c9b892' },
       { x: 1150, y: 120, angle: -Math.PI/2, color: '#d83a58' }
     ],
     traffic: [],
@@ -2573,7 +2627,7 @@ const LEVELS = [
     ],
     traffic: [
       { x: 1100, y: 200, angle: Math.PI, speed: 50, color: '#d83a58' },
-      { x: 180,  y: 530, angle: 0,       speed: 55, color: '#e8e3d5' }
+      { x: 180,  y: 530, angle: 0,       speed: 55, color: '#c9b892' }
     ],
     player: { x: 100, y: 590, angle: 0 },
     target: { x: 1060, y: 590, angle: Math.PI/2 }
@@ -2624,7 +2678,7 @@ const LEVELS = [
       { x: 1000, y: 540, angle: Math.PI/2,  color: '#2f9f6c' },
       { x: 1160, y: 540, angle: Math.PI/2,  color: '#a058e0' },
       { x: 560,  y: 560, angle: -Math.PI/2, color: '#d83a58' },
-      { x: 720,  y: 560, angle: -Math.PI/2, color: '#e8e3d5' }
+      { x: 720,  y: 560, angle: -Math.PI/2, color: '#c9b892' }
     ],
     traffic: [],
     player: { x: 640, y: 360, angle: 0 },
@@ -2707,7 +2761,7 @@ const LEVELS = [
     ],
     traffic: [
       { x: 1100, y: 260, angle: Math.PI, speed: 48, color: '#d83a58' },
-      { x: 180,  y: 540, angle: 0,       speed: 44, color: '#e8e3d5' }
+      { x: 180,  y: 540, angle: 0,       speed: 44, color: '#c9b892' }
     ],
     player: { x: 120, y: 540, angle: 0 },
     target: { x: 620, y: 180, angle: -Math.PI/2 }
@@ -3001,6 +3055,8 @@ const UI = (function(){
     winDamage:   document.getElementById('win-damage'),
     winPlate:    document.getElementById('win-plate'),
     winUnlock:   document.getElementById('win-unlock'),
+    winChamp:    document.getElementById('win-champ'),
+    winTitle:    document.getElementById('win-title'),
     winMenu:     document.getElementById('win-menu'),
     winRetry:    document.getElementById('win-retry'),
     winNext:     document.getElementById('win-next'),
@@ -3159,6 +3215,21 @@ const UI = (function(){
       el.winUnlock.classList.add('hidden');
     }
     el.winNext.style.display = info.hasNext ? '' : 'none';
+    // Campaign Complete celebration: unique treatment for the final-level win
+    // (no next stage after this one). Swap the normal "Parked." title for
+    // something that acknowledges finishing everything, and reveal the banner.
+    const isCampaignEnd = !info.hasNext;
+    clear(el.winTitle);
+    if(isCampaignEnd){
+      el.winChamp.classList.remove('hidden');
+      el.winPlate.textContent = '\u2605 Final Stage Cleared \u2605';
+      el.winTitle.appendChild(document.createTextNode('Grand Prix'));
+    } else {
+      el.winChamp.classList.add('hidden');
+      el.winPlate.textContent = '\u2605 Stage Complete \u2605';
+      el.winTitle.appendChild(document.createTextNode('Parked'));
+    }
+    el.winTitle.appendChild(makeEl('span', 'dot', '.'));
     show(el.winScreen);
   }
   function showFail(){
@@ -3665,9 +3736,11 @@ const Game = (function(){
     if(level.surface === 'ice'){
       player.grip = 0.35;
     }
-    // Rain sits between dry asphalt and ice. Noticeable slip but not lethal.
+    // Rain sits between dry asphalt and ice. 0.72 was too subtle to feel in
+    // the cockpit; dropping to 0.55 cuts brake power and coast friction by
+    // ~45%, so you clearly overshoot if you don't lift off earlier.
     if(level.weather === 'rain'){
-      player.grip = 0.72;
+      player.grip = 0.55;
     }
     // Apply difficulty-tuned knobs. Read from storage every loadLevel so toggling
     // difficulty on the start screen takes effect on the next play.
