@@ -3959,23 +3959,27 @@ const Game = (function(){
     c.fillStyle = ambient;
     c.fillRect(p.x - 90, p.y - 90, 180, 180);
 
-    // Headlight cone: radial gradient anchored forward of the car,
-    // clipped to a wedge pointing along the car's angle.
-    const FWD = 90, REACH = 280, SPREAD = Math.PI / 3.2;
-    const hx = p.x + Math.cos(p.angle) * FWD;
-    const hy = p.y + Math.sin(p.angle) * FWD;
-    const head = c.createRadialGradient(p.x, p.y, 0, hx, hy, REACH);
+    // Headlight cone: a SYMMETRIC radial centered on the car (so the
+    // intensity falls off purely by distance), clipped to a forward wedge.
+    // The earlier two-circle gradient produced a teardrop shape, because
+    // offsetting the gradient's far-center forward elongates the falloff
+    // along one axis. Keeping the gradient symmetric lets the wedge alone
+    // define the cone shape, which reads as directional light instead of
+    // a weird forward-projected blob.
+    const REACH = 310, SPREAD = Math.PI / 2.8; // ~64° cone
+    const head = c.createRadialGradient(p.x, p.y, 12, p.x, p.y, REACH);
     head.addColorStop(0,    'rgba(0,0,0,1)');
-    head.addColorStop(0.55, 'rgba(0,0,0,0.7)');
+    head.addColorStop(0.35, 'rgba(0,0,0,0.85)');
+    head.addColorStop(0.7,  'rgba(0,0,0,0.45)');
     head.addColorStop(1,    'rgba(0,0,0,0)');
     c.save();
     c.beginPath();
     c.moveTo(p.x, p.y);
-    c.arc(p.x, p.y, REACH + 40, p.angle - SPREAD, p.angle + SPREAD);
+    c.arc(p.x, p.y, REACH, p.angle - SPREAD, p.angle + SPREAD);
     c.closePath();
     c.clip();
     c.fillStyle = head;
-    c.fillRect(p.x - REACH - 40, p.y - REACH - 40, (REACH + 40) * 2, (REACH + 40) * 2);
+    c.fillRect(p.x - REACH, p.y - REACH, REACH * 2, REACH * 2);
     c.restore();
 
     // Target beacon: soft persistent glow so players can navigate on
