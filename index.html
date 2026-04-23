@@ -1557,7 +1557,17 @@ const Input = (function(){
     state.handbrake = keys.has(' ') || _touchHandbrake;
   }
 
+  function isEditableTarget(t){
+    if(!t) return false;
+    if(t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT') return true;
+    if(t.isContentEditable) return true;
+    return false;
+  }
   function onKeyDown(e){
+    // Don't hijack keys while the user is typing in an input/textarea
+    // (e.g. the driver-name field on the leaderboard). Otherwise our
+    // preventDefault on the driving keys would eat A, S, W, D, R, Space.
+    if(isEditableTarget(e.target)) return;
     const k = e.key.toLowerCase();
     if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','r'].includes(k)){
       e.preventDefault();
@@ -1568,6 +1578,7 @@ const Input = (function(){
     Audio.resume();
   }
   function onKeyUp(e){
+    if(isEditableTarget(e.target)) return;
     const k = e.key.toLowerCase();
     keys.delete(k);
     updateFromKeys();
