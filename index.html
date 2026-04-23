@@ -644,6 +644,146 @@ html,body{
 }
 .result-plate.fail{ background:var(--blood) }
 
+/* Garage screen: buy + equip car skins with earned coins. */
+#shop-screen{ padding:0; background:var(--bg); overflow:auto }
+.shop-wrap{
+  max-width:1180px;
+  margin:0 auto;
+  padding:48px 32px 32px;
+}
+.shop-head{
+  border-bottom:2px solid var(--ink);
+  padding-bottom:22px;
+  margin-bottom:28px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:16px;
+}
+.shop-kicker{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:0.38em;
+  text-transform:uppercase;
+  color:var(--pink-ink);
+  font-weight:600;
+  margin-bottom:10px;
+}
+.shop-title{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-size:clamp(56px, 12vw, 88px);
+  line-height:1;
+  letter-spacing:0.01em;
+  transform:skewX(var(--skew));
+  display:inline-block;
+  color:var(--ink);
+}
+.shop-title .dot{ color:var(--pink) }
+.shop-wallet{
+  display:flex; align-items:baseline; gap:10px;
+  background:var(--ink);
+  color:var(--bg);
+  padding:12px 20px;
+  border:2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--pink);
+}
+.shop-wallet-lbl{
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:0.32em;
+  text-transform:uppercase;
+  color:var(--pink);
+  font-weight:600;
+}
+.shop-wallet-amt{
+  font-family:var(--font-mono);
+  font-size:28px;
+  font-weight:600;
+  color:var(--bg);
+  letter-spacing:-0.01em;
+}
+.shop-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap:16px;
+  margin-bottom:28px;
+}
+.skin-card{
+  background:var(--bg);
+  border:2px solid var(--ink);
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  cursor:pointer;
+  font:inherit;
+  text-align:left;
+  transition: all 0.15s ease;
+}
+.skin-card:hover{ transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink) }
+.skin-card.equipped{ background:var(--ink); color:var(--bg); border-color:var(--pink) }
+.skin-card.locked{ opacity:0.7 }
+.skin-card:disabled{ cursor:not-allowed }
+.skin-swatch{
+  height:70px;
+  border:1.5px solid var(--ink);
+  position:relative;
+}
+.skin-card.equipped .skin-swatch{ border-color:var(--bg) }
+.skin-swatch::after{
+  content:"";
+  position:absolute; top:50%; left:50%;
+  width:46%; height:30%;
+  transform:translate(-50%, -50%);
+  background:rgba(0,0,0,0.22);
+  border-radius:2px;
+}
+.skin-name{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-size:22px;
+  line-height:1;
+  transform:skewX(var(--skew));
+  display:inline-block;
+}
+.skin-card.equipped .skin-name{ color:var(--bg) }
+.skin-meta{
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:var(--ink-2);
+}
+.skin-card.equipped .skin-meta{ color:var(--pink) }
+.skin-meta .owned{ color:#4aa574 }
+.skin-meta .locked-tag{ color:var(--blood) }
+.shop-footer{
+  display:flex;
+  justify-content:center;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+}
+
+/* Coins-earned banner on the win screen. Shows the reward from a
+   first-time level clear so the coin-to-shop loop is visible. */
+.coins-earned{
+  font-family:var(--font-mono);
+  font-size:13px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--pink-ink);
+  font-weight:600;
+  padding:12px 16px;
+  background:var(--pink);
+  text-align:center;
+  margin-top:14px;
+  border:1.5px solid var(--ink);
+}
+.coins-earned.hidden{ display:none }
+.coins-earned .amt{ font-size:20px; letter-spacing:0.02em }
+
 /* Tutorial overlay: fires on the first level load ever. Darkens the
    gameplay area behind it so the player focuses on the three rules
    before touching the keyboard. One-and-done — dismiss writes
@@ -1664,6 +1804,7 @@ html,body{
       <div class="level-grid" id="level-grid"></div>
       <div class="start-footer">
         <div class="start-actions">
+          <button class="ghost-btn" id="open-shop">Garage<span class="arrow"> &rarr;</span></button>
           <button class="ghost-btn" id="open-leaderboard">Leaderboard<span class="arrow"> &rarr;</span></button>
         </div>
         <div class="keys">
@@ -1715,6 +1856,23 @@ html,body{
       </div>
     </div>
 
+    <div class="screen hidden" id="shop-screen">
+      <div class="shop-wrap">
+        <div class="shop-head">
+          <div class="shop-kicker">Garage</div>
+          <h2 class="shop-title">Paint the ride<span class="dot">.</span></h2>
+          <div class="shop-wallet">
+            <span class="shop-wallet-lbl">Coins</span>
+            <span class="shop-wallet-amt" id="shop-coins">0</span>
+          </div>
+        </div>
+        <div class="shop-grid" id="shop-grid"></div>
+        <div class="shop-footer">
+          <button class="btn btn-primary" id="shop-close">Back</button>
+        </div>
+      </div>
+    </div>
+
     <div class="screen hidden" id="win-screen">
       <div class="result-box">
         <div class="champ-banner hidden" id="win-champ">
@@ -1732,6 +1890,7 @@ html,body{
           <div class="stat"><div class="l">Best</div><div class="v" id="win-best">&mdash;</div></div>
           <div class="stat"><div class="l">Hits</div><div class="v" id="win-damage">0</div></div>
         </div>
+        <div class="coins-earned hidden" id="win-coins"></div>
         <div class="unlock-banner hidden" id="win-unlock"></div>
         <div class="actions">
           <button class="btn" id="win-menu">Menu</button>
@@ -1794,6 +1953,24 @@ html,body{
 /* ============================================================
    STORAGE — localStorage wrapper with a single namespaced key
    ============================================================ */
+/* ============================================================
+   SKIN CATALOG — car colors the player can buy with earned coins.
+   Pink is free (default). Every other skin unlocks by spending coins.
+   Coin math: 10 coins per star, 30 per 3-star clean run.
+   ============================================================ */
+const SKINS = [
+  { id: 'pink',      name: 'Rally Pink', color: '#f28cc7', price: 0 },
+  { id: 'amber',     name: 'Amber',      color: '#f7d548', price: 25 },
+  { id: 'sage',      name: 'Sage',       color: '#7fc1a1', price: 50 },
+  { id: 'cobalt',    name: 'Cobalt',     color: '#4a90e2', price: 80 },
+  { id: 'crimson',   name: 'Crimson',    color: '#d83a58', price: 150 },
+  { id: 'onyx',      name: 'Onyx',       color: '#2a2b31', price: 300 }
+];
+function skinById(id){
+  for(let i = 0; i < SKINS.length; i++) if(SKINS[i].id === id) return SKINS[i];
+  return SKINS[0];
+}
+
 const Storage = (function(){
   const KEY = 'parking.zen.save.v1';
   const defaults = {
@@ -1804,7 +1981,10 @@ const Storage = (function(){
     muted: false,
     playerName: '',
     seenTutorial: false,
-    dailies: {}       // YYYY-MM-DD -> { levelId, bestTime, bestStars, completions }
+    dailies: {},      // YYYY-MM-DD -> { levelId, bestTime, bestStars, completions }
+    coins: 0,
+    ownedSkins: ['pink'],
+    activeSkin: 'pink'
   };
   let state = null;
   function load(){
@@ -1817,6 +1997,10 @@ const Storage = (function(){
     if(state.difficulty !== 'hard') state.difficulty = 'normal';
     if(state.playerName == null) state.playerName = '';
     if(!state.dailies) state.dailies = {};
+    if(typeof state.coins !== 'number') state.coins = 0;
+    if(!Array.isArray(state.ownedSkins)) state.ownedSkins = ['pink'];
+    if(state.ownedSkins.indexOf('pink') === -1) state.ownedSkins.push('pink');
+    if(!state.activeSkin) state.activeSkin = 'pink';
     return state;
   }
 
@@ -1945,11 +2129,36 @@ const Storage = (function(){
     s.seenTutorial = true;
     save();
   }
+  // Coins + skins API. Pure data, no UI knowledge.
+  function addCoins(n){
+    const s = get();
+    s.coins = Math.max(0, (s.coins || 0) + n);
+    save();
+    return s.coins;
+  }
+  function buySkin(id){
+    const s = get();
+    if(s.ownedSkins.indexOf(id) !== -1) return { ok: true, owned: true };
+    const skin = skinById(id);
+    if((s.coins || 0) < skin.price) return { ok: false, reason: 'not_enough_coins' };
+    s.coins -= skin.price;
+    s.ownedSkins.push(id);
+    s.activeSkin = id; // auto-equip on purchase
+    save();
+    return { ok: true, owned: false, newActive: id };
+  }
+  function setActiveSkin(id){
+    const s = get();
+    if(s.ownedSkins.indexOf(id) === -1) return false;
+    s.activeSkin = id;
+    save();
+    return true;
+  }
   // Return the active-difficulty record dict, so callers that don't want to
   // branch on s.difficulty themselves can just ask once.
   function activeLevels(){ return dictFor(get()); }
   function reset(){ state = Object.assign({}, defaults, { levels:{}, levelsHard:{} }); save(); }
-  return { load, get, recordWin, setMuted, reset, setPlayerName, resetProgress, setDifficulty, activeLevels, setTutorialSeen, todayKey, dailyLevelFor, recordDaily, dailyStreak };
+  return { load, get, recordWin, setMuted, reset, setPlayerName, resetProgress, setDifficulty, activeLevels, setTutorialSeen, todayKey, dailyLevelFor, recordDaily, dailyStreak, addCoins, buySkin, setActiveSkin };
 })();
 
 /* ============================================================
@@ -3553,6 +3762,7 @@ const UI = (function(){
     winDamage:   document.getElementById('win-damage'),
     winPlate:    document.getElementById('win-plate'),
     winUnlock:   document.getElementById('win-unlock'),
+    winCoins:    document.getElementById('win-coins'),
     winChamp:    document.getElementById('win-champ'),
     winTitle:    document.getElementById('win-title'),
     winMenu:     document.getElementById('win-menu'),
@@ -3579,6 +3789,11 @@ const UI = (function(){
     lbBoardRows:  document.getElementById('lb-board-rows'),
     lbClose:      document.getElementById('lb-close'),
     lbReset:      document.getElementById('lb-reset'),
+    openShop:     document.getElementById('open-shop'),
+    shopScreen:   document.getElementById('shop-screen'),
+    shopGrid:     document.getElementById('shop-grid'),
+    shopCoins:    document.getElementById('shop-coins'),
+    shopClose:    document.getElementById('shop-close'),
     nameInput:    document.getElementById('name-input')
   };
 
@@ -3710,6 +3925,16 @@ const UI = (function(){
       el.winBest.appendChild(makeEl('span', 'new-best', 'NEW'));
     }
     el.winDamage.textContent = String(info.damage);
+    // Coins earned: first-clear reward, hidden on replays (coinsEarned = 0).
+    clear(el.winCoins);
+    if(info.coinsEarned && info.coinsEarned > 0){
+      el.winCoins.classList.remove('hidden');
+      el.winCoins.appendChild(document.createTextNode('Earned '));
+      el.winCoins.appendChild(makeEl('span', 'amt', '+' + info.coinsEarned));
+      el.winCoins.appendChild(document.createTextNode(' coins'));
+    } else {
+      el.winCoins.classList.add('hidden');
+    }
     // Unlock banner
     clear(el.winUnlock);
     if(info.justUnlocked){
@@ -4069,6 +4294,56 @@ const UI = (function(){
     el.dailyPlay.addEventListener('click', function(){
       handlers.playDaily();
     });
+    // Garage (shop): open + close + skin card click.
+    el.openShop.addEventListener('click', function(){ handlers.openShop(); });
+    el.shopClose.addEventListener('click', function(){ handlers.closeShop(); });
+    el.shopGrid.addEventListener('click', function(ev){
+      const card = ev.target.closest('.skin-card');
+      if(card){
+        handlers.skinClick(card.getAttribute('data-skin'));
+      }
+    });
+  }
+
+  // Shop (Garage): render the skin catalog with buy/equip actions.
+  function showShop(){
+    hide(el.startScreen);
+    renderShop();
+    show(el.shopScreen);
+  }
+  function hideShop(){
+    hide(el.shopScreen);
+    show(el.startScreen);
+  }
+  function renderShop(){
+    const save = Storage.get();
+    el.shopCoins.textContent = String(save.coins || 0);
+    clear(el.shopGrid);
+    SKINS.forEach(function(skin){
+      const owned = save.ownedSkins.indexOf(skin.id) !== -1;
+      const equipped = save.activeSkin === skin.id;
+      const canAfford = (save.coins || 0) >= skin.price;
+      const card = document.createElement('button');
+      card.className = 'skin-card' + (equipped ? ' equipped' : '') + (!owned && !canAfford ? ' locked' : '');
+      card.disabled = !owned && !canAfford;
+      card.setAttribute('data-skin', skin.id);
+      const swatch = makeEl('div', 'skin-swatch');
+      swatch.style.background = skin.color;
+      card.appendChild(swatch);
+      card.appendChild(makeEl('div', 'skin-name', skin.name));
+      const meta = makeEl('div', 'skin-meta');
+      if(equipped){
+        meta.appendChild(makeEl('span', 'owned', 'Equipped'));
+      } else if(owned){
+        meta.appendChild(document.createTextNode('Tap to equip'));
+      } else if(canAfford){
+        meta.appendChild(document.createTextNode(String(skin.price) + ' coins'));
+      } else {
+        meta.appendChild(makeEl('span', 'locked-tag', String(skin.price) + ' coins'));
+      }
+      card.appendChild(meta);
+      el.shopGrid.appendChild(card);
+    });
   }
 
   // Daily Challenge card: paints the stage picked for today + whether the
@@ -4141,7 +4416,7 @@ const UI = (function(){
   }
 
   return {
-    showStart, startPlay, showWin, showFail, updateHUD, setMuted, setValetProgress, rebuildDamageSegments, syncDifficultyToggle, showTutorial, syncDailyCard,
+    showStart, startPlay, showWin, showFail, updateHUD, setMuted, setValetProgress, rebuildDamageSegments, syncDifficultyToggle, showTutorial, syncDailyCard, showShop, hideShop, renderShop,
     showTip, flash, bind, showLeaderboard, hideLeaderboard, renderLeaderboard
   };
 })();
@@ -4272,6 +4547,24 @@ const Game = (function(){
         if(idx < 0) return;
         dailyMode = true;
         loadLevel(idx);
+      },
+      openShop: function(){ UI.showShop(); },
+      closeShop: function(){ UI.hideShop(); },
+      skinClick: function(id){
+        const save = Storage.get();
+        const owned = save.ownedSkins.indexOf(id) !== -1;
+        if(owned){
+          // Already owned \u2192 equip.
+          Storage.setActiveSkin(id);
+        } else {
+          // Not owned \u2192 try to buy. buySkin auto-equips on success.
+          const result = Storage.buySkin(id);
+          if(!result.ok){
+            // Not enough coins; no-op (button should already be disabled).
+            return;
+          }
+        }
+        UI.renderShop();
       }
     });
 
@@ -4301,9 +4594,10 @@ const Game = (function(){
       truck: { length: 72, width: 30, wheelbase: 44 }
     };
     const vehicle = VEHICLES[level.vehicle] || VEHICLES.car;
+    const activeSkinColor = skinById(Storage.get().activeSkin).color;
     player = Car.make({
       x: level.player.x, y: level.player.y, angle: level.player.angle,
-      color: '#f28cc7', isPlayer: true,
+      color: activeSkinColor, isPlayer: true,
       length: vehicle.length, width: vehicle.width, wheelbase: vehicle.wheelbase
     });
     // Apply per-level surface (ice = reduced grip, harder to stop/turn).
@@ -4902,6 +5196,17 @@ const Game = (function(){
     if(dailyMode){
       Storage.recordDaily(Storage.todayKey(), level.id, timer, damage, result.stars);
     }
+    // Coins: award 10 per star (30 for a clean 3-star run). Only on the FIRST
+    // win per level per difficulty-tier so the shop can't be farmed by replays.
+    // result.newBest being true for the very first completion isn't reliable;
+    // check completions count instead.
+    const levelRecDict = Storage.activeLevels();
+    const rec = levelRecDict[level.id];
+    let coinsEarned = 0;
+    if(rec && rec.completions === 1){
+      coinsEarned = result.stars * 10;
+      Storage.addCoins(coinsEarned);
+    }
     UI.showWin({
       levelId: level.id,
       stars: result.stars,
@@ -4913,7 +5218,8 @@ const Game = (function(){
       unlockedName: result.justUnlocked != null
         ? (LEVELS[result.justUnlocked - 1] && LEVELS[result.justUnlocked - 1].name) || null
         : null,
-      newBest: result.newBest
+      newBest: result.newBest,
+      coinsEarned: coinsEarned
     });
   }
 
