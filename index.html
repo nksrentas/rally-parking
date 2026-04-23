@@ -595,6 +595,99 @@ html,body{
 }
 .result-plate.fail{ background:var(--blood) }
 
+/* Tutorial overlay: fires on the first level load ever. Darkens the
+   gameplay area behind it so the player focuses on the three rules
+   before touching the keyboard. One-and-done — dismiss writes
+   save.seenTutorial = true. */
+.tutorial-overlay{
+  position:absolute; inset:0;
+  background:rgba(20, 16, 12, 0.72);
+  display:flex; align-items:center; justify-content:center;
+  z-index:50;
+  padding:24px;
+  animation: tutFade 0.35s var(--ease-out);
+}
+.tutorial-overlay.hidden{ display:none }
+@keyframes tutFade { from { opacity:0 } to { opacity:1 } }
+.tutorial-card{
+  background:var(--bg);
+  border:2px solid var(--ink);
+  box-shadow: 10px 10px 0 var(--ink);
+  padding:40px 40px 32px;
+  max-width:520px;
+  width:100%;
+  position:relative;
+}
+.tutorial-plate{
+  display:inline-block;
+  background:var(--pink);
+  color:var(--pink-ink);
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:0.32em;
+  font-weight:600;
+  padding:5px 14px;
+  text-transform:uppercase;
+}
+.tutorial-title{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-size:clamp(40px, 9vw, 62px);
+  line-height:1;
+  letter-spacing:0.01em;
+  transform:skewX(var(--skew));
+  display:inline-block;
+  margin:14px 0 22px;
+  color:var(--ink);
+}
+.tutorial-title .dot{ color:var(--pink) }
+.tutorial-rows{
+  display:flex; flex-direction:column;
+  gap:16px;
+  margin-bottom:28px;
+  border-top:1px solid var(--line);
+  padding-top:20px;
+}
+.tutorial-row{
+  display:grid;
+  grid-template-columns: 180px 1fr;
+  gap:18px;
+  align-items:center;
+}
+.tutorial-keys{ display:flex; align-items:center; gap:6px; flex-wrap:wrap }
+.tutorial-keys kbd{
+  font-family:var(--font-mono);
+  font-size:11px;
+  font-weight:600;
+  padding:4px 8px;
+  min-width:22px;
+  text-align:center;
+  background:var(--bg-2);
+  border:1.5px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  color:var(--ink);
+}
+.tutorial-keys .k-r{ margin-left:6px }
+.tutorial-or{
+  font-family:var(--font-mono);
+  font-size:9px;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:var(--ink-2);
+}
+.tutorial-swatch{
+  height:28px; width:42px;
+  background:rgba(89, 201, 139, 0.28);
+  border:1.5px solid rgba(89, 201, 139, 0.85);
+}
+.tutorial-what{
+  font-family:var(--font-body);
+  font-size:14px;
+  color:var(--ink);
+  line-height:1.45;
+  font-weight:500;
+}
+
 /* Campaign Complete banner — only shown when the player wins the final level.
    A grandiose farewell that makes ending the 12-stage campaign feel like a
    moment, not just another "Next" button being grayed out. */
@@ -1356,6 +1449,9 @@ html,body{
   .champ-banner{ padding:16px 14px 18px; margin:0 -18px 14px }
   .champ-kicker{ font-size:9px; letter-spacing:0.32em }
   .champ-sub{ font-size:10px; letter-spacing:0.06em }
+  .tutorial-card{ padding:28px 22px 22px; box-shadow: 6px 6px 0 var(--ink) }
+  .tutorial-row{ grid-template-columns: 1fr; gap:6px }
+  .tutorial-what{ font-size:13px }
   .result-stats{ margin:20px -18px 0 }
   .stat{ padding:14px 4px }
   .stat .l{ font-size:8px; letter-spacing:0.2em }
@@ -1593,6 +1689,38 @@ html,body{
         </div>
       </div>
     </div>
+
+    <div class="tutorial-overlay hidden" id="tutorial-overlay">
+      <div class="tutorial-card">
+        <div class="tutorial-plate">First Race</div>
+        <h2 class="tutorial-title">Here\u2019s the job<span class="dot">.</span></h2>
+        <div class="tutorial-rows">
+          <div class="tutorial-row">
+            <div class="tutorial-keys">
+              <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+              <span class="tutorial-or">or arrows</span>
+            </div>
+            <div class="tutorial-what">Drive the pink car.</div>
+          </div>
+          <div class="tutorial-row">
+            <div class="tutorial-keys tutorial-swatch"></div>
+            <div class="tutorial-what">Park on the green spot. Line up the arrow, then stop.</div>
+          </div>
+          <div class="tutorial-row">
+            <div class="tutorial-keys">
+              <kbd>Space</kbd>
+              <span class="tutorial-or">handbrake</span>
+              <kbd class="k-r">R</kbd>
+              <span class="tutorial-or">reset</span>
+            </div>
+            <div class="tutorial-what">Use these when you overshoot. It happens.</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="tutorial-go">Got it. Let\u2019s drive.</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1611,7 +1739,8 @@ const Storage = (function(){
     levelsHard: {},   // Hard-mode records (separate ghosts, bestTimes, stars)
     difficulty: 'normal',
     muted: false,
-    playerName: ''
+    playerName: '',
+    seenTutorial: false
   };
   let state = null;
   function load(){
@@ -1693,11 +1822,16 @@ const Storage = (function(){
     s.difficulty = (d === 'hard') ? 'hard' : 'normal';
     save();
   }
+  function setTutorialSeen(){
+    const s = get();
+    s.seenTutorial = true;
+    save();
+  }
   // Return the active-difficulty record dict, so callers that don't want to
   // branch on s.difficulty themselves can just ask once.
   function activeLevels(){ return dictFor(get()); }
   function reset(){ state = Object.assign({}, defaults, { levels:{}, levelsHard:{} }); save(); }
-  return { load, get, recordWin, setMuted, reset, setPlayerName, resetProgress, setDifficulty, activeLevels };
+  return { load, get, recordWin, setMuted, reset, setPlayerName, resetProgress, setDifficulty, activeLevels, setTutorialSeen };
 })();
 
 /* ============================================================
@@ -3062,6 +3196,8 @@ const UI = (function(){
     winNext:     document.getElementById('win-next'),
     failMenu:    document.getElementById('fail-menu'),
     failRetry:   document.getElementById('fail-retry'),
+    tutorialOverlay: document.getElementById('tutorial-overlay'),
+    tutorialGo:  document.getElementById('tutorial-go'),
     tip:         document.getElementById('tip'),
     flash:       document.getElementById('flash'),
     openLb:       document.getElementById('open-leaderboard'),
@@ -3572,6 +3708,20 @@ const UI = (function(){
   // Valet Rush progress indicator. idx=-1 hides the panel (non-valet levels).
   // idx=N shows the panel with diamond dots: done < current=active, done = filled green,
   // pending = outline. Count reads "<current+1>/<total>".
+  // Tutorial overlay: shown once ever on the first level load. Pauses nothing,
+  // it's a visual nudge that a beginner reads for 5-10 seconds. The "Got it"
+  // button dismisses, persists seenTutorial=true, and returns control.
+  function showTutorial(onDismiss){
+    el.tutorialOverlay.classList.remove('hidden');
+    // Single-shot handler. Use once: true so we don't stack handlers on repeat.
+    const handler = function(){
+      el.tutorialOverlay.classList.add('hidden');
+      Storage.setTutorialSeen();
+      if(typeof onDismiss === 'function') onDismiss();
+    };
+    el.tutorialGo.addEventListener('click', handler, { once: true });
+  }
+
   function setValetProgress(currentIdx, total){
     if(currentIdx < 0 || !total){
       el.hudValet.classList.add('hidden');
@@ -3589,7 +3739,7 @@ const UI = (function(){
   }
 
   return {
-    showStart, startPlay, showWin, showFail, updateHUD, setMuted, setValetProgress, rebuildDamageSegments, syncDifficultyToggle,
+    showStart, startPlay, showWin, showFail, updateHUD, setMuted, setValetProgress, rebuildDamageSegments, syncDifficultyToggle, showTutorial,
     showTip, flash, bind, showLeaderboard, hideLeaderboard, renderLeaderboard
   };
 })();
@@ -3804,6 +3954,20 @@ const Game = (function(){
     state = 'play';
     UI.startPlay();
     UI.updateHUD(level.id, 0, 0, 0);
+    // First-ever level load: show the tutorial nudge. Halt the engine while
+    // the overlay is up so the car doesn't start drifting if the player
+    // accidentally lands on an accel key. Resume on dismiss.
+    const seenTutorial = Storage.get().seenTutorial;
+    if(!seenTutorial){
+      Audio.stopEngine();
+      Input.reset();
+      state = 'tutorial';
+      UI.showTutorial(function(){
+        state = 'play';
+        Audio.resume();
+        Audio.startEngine();
+      });
+    }
     if(level.tip){
       const tipText = playbackGhost
         ? level.tip + '  \u00b7  Ghost ' + fmtTime(playbackGhost.time)
