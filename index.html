@@ -1228,7 +1228,7 @@ html,body{
             <div class="tag-row">
               <span class="plate">Rally Plate</span>
               <span>&middot; Est. 2026</span>
-              <span>&middot; 5 Stages</span>
+              <span>&middot; 8 Stages</span>
             </div>
             <h1 class="brand">Parking <span class="zen">Zen</span></h1>
             <p class="tagline">Nail the spot. No rush.</p>
@@ -1667,21 +1667,24 @@ const Car = (function(){
   }
 
   function step(car, dt, input){
+    // Surface grip multiplier — 1.0 = tarmac, <1.0 = slippery (ice, snow).
+    // Affects friction decay, brake strength, and handbrake effectiveness.
+    const grip = (car.grip != null) ? car.grip : 1.0;
     if(input.accel){
       car.vel += DEFAULTS.accel * dt;
     } else if(input.brake){
       if(car.vel > 10){
-        car.vel -= DEFAULTS.brakeStrength * dt;
+        car.vel -= DEFAULTS.brakeStrength * grip * dt;
       } else {
-        car.vel -= DEFAULTS.accel * 0.8 * dt;
+        car.vel -= DEFAULTS.accel * 0.8 * grip * dt;
       }
     } else {
-      const decay = Math.exp(-DEFAULTS.friction * dt);
+      const decay = Math.exp(-DEFAULTS.friction * grip * dt);
       car.vel *= decay;
-      if(Math.abs(car.vel) < 2) car.vel = 0;
+      if(Math.abs(car.vel) < 2 * grip) car.vel = 0;
     }
     if(input.handbrake){
-      const decay = Math.exp(-DEFAULTS.friction * DEFAULTS.handbrakeMult * dt);
+      const decay = Math.exp(-DEFAULTS.friction * DEFAULTS.handbrakeMult * grip * dt);
       car.vel *= decay;
     }
     car.vel = Math.max(-DEFAULTS.maxReverseSpeed, Math.min(DEFAULTS.maxSpeed, car.vel));
@@ -2118,6 +2121,121 @@ const LEVELS = [
     parkedCars: [],
     player: { x: 210, y: 360, angle: 0 },
     target: { x: 1060, y: 360, angle: Math.PI }
+  },
+
+  // -------- Level 6: Parking Garage (pillars + big vertical world) --------
+  {
+    id: 6,
+    name: 'Garage',
+    desc: 'Parking garage \u00b7 Pillars and parked cars',
+    tip: 'Watch the pillars. Line up early.',
+    targetTime: 40,
+    world: { w: 1280, h: 900 },
+    grass: [],
+    markings: { centerDashed: null, laneEdges: [] },
+    walls: [
+      // outer bounds
+      { x: 0, y: 0, w: 1280, h: 20 },
+      { x: 0, y: 880, w: 1280, h: 20 },
+      { x: 0, y: 0, w: 20, h: 900 },
+      { x: 1260, y: 0, w: 20, h: 900 },
+      // Central row of pillars — blocks straight-line path from entrance to target
+      { x: 318, y: 440, w: 44, h: 44 },
+      { x: 618, y: 440, w: 44, h: 44 },
+      { x: 918, y: 440, w: 44, h: 44 },
+      // Staggered row — forces s-curve navigation
+      { x: 168, y: 640, w: 44, h: 44 },
+      { x: 468, y: 640, w: 44, h: 44 },
+      { x: 768, y: 640, w: 44, h: 44 },
+      { x: 1068, y: 640, w: 44, h: 44 }
+    ],
+    parkingSpots: [
+      { x: 130, y: 120, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 230, y: 120, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 330, y: 120, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 430, y: 120, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 540, y: 120, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 640, y: 120, w: 60, h: 96, angle: -Math.PI/2, target: true },
+      { x: 750, y: 120, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 850, y: 120, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 950, y: 120, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 1050, y: 120, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 1150, y: 120, w: 56, h: 96, angle: -Math.PI/2 }
+    ],
+    parkedCars: [
+      { x: 130,  y: 120, angle: -Math.PI/2, color: '#4a90e2' },
+      { x: 330,  y: 120, angle: -Math.PI/2, color: '#ff8c42' },
+      { x: 540,  y: 120, angle: -Math.PI/2, color: '#2f9f6c' },
+      { x: 750,  y: 120, angle: -Math.PI/2, color: '#a058e0' },
+      { x: 950,  y: 120, angle: -Math.PI/2, color: '#e8e3d5' },
+      { x: 1150, y: 120, angle: -Math.PI/2, color: '#d83a58' }
+    ],
+    traffic: [],
+    player: { x: 640, y: 820, angle: -Math.PI/2 },
+    target: { x: 640, y: 120, angle: -Math.PI/2 }
+  },
+
+  // -------- Level 7: Frostbite (reduced grip) --------
+  {
+    id: 7,
+    name: 'Frostbite',
+    desc: 'Snow-covered lot \u00b7 Reduced grip',
+    tip: 'Slippery. Lift off the gas earlier than you think.',
+    targetTime: 26,
+    world: { w: 1280, h: 720 },
+    surface: 'ice',
+    grass: [{ x:0, y:0, w:1280, h:90 }, { x:0, y:630, w:1280, h:90 }],
+    markings: {
+      centerDashed: { x1:0, y1:420, x2:1280, y2:420 },
+      laneEdges: [{ x1:0,y1:110,x2:1280,y2:110 }, { x1:0,y1:610,x2:1280,y2:610 }]
+    },
+    parkingSpots: [
+      { x: 380, y: 180, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 470, y: 180, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 560, y: 180, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 640, y: 180, w: 60, h: 96, angle: -Math.PI/2, target: true },
+      { x: 720, y: 180, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 810, y: 180, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 900, y: 180, w: 56, h: 96, angle: -Math.PI/2 }
+    ],
+    parkedCars: [
+      { x: 560, y: 180, angle: -Math.PI/2, color: '#e0ddd1' },
+      { x: 720, y: 180, angle: -Math.PI/2, color: '#4a90e2' }
+    ],
+    traffic: [],
+    player: { x: 640, y: 540, angle: -Math.PI/2 },
+    target: { x: 640, y: 180, angle: -Math.PI/2 }
+  },
+
+  // -------- Level 8: Zigzag (narrow corridor, precision) --------
+  {
+    id: 8,
+    name: 'Zigzag',
+    desc: 'Narrow corridor \u00b7 Precision turns',
+    tip: 'Swerve around the barriers. No rush, precision wins.',
+    targetTime: 32,
+    world: { w: 1280, h: 720 },
+    grass: [],
+    markings: { centerDashed: null, laneEdges: [] },
+    walls: [
+      // outer bounds
+      { x: 0, y: 0, w: 1280, h: 20 },
+      { x: 0, y: 700, w: 1280, h: 20 },
+      { x: 0, y: 0, w: 20, h: 720 },
+      { x: 1260, y: 0, w: 20, h: 720 },
+      // Barrier 1 — center, forces player left or right
+      { x: 440, y: 430, w: 400, h: 24 },
+      // Barriers 2 & 3 — outer, force player to thread the middle
+      { x: 140, y: 240, w: 400, h: 24 },
+      { x: 740, y: 240, w: 400, h: 24 }
+    ],
+    parkingSpots: [
+      { x: 640, y: 120, w: 60, h: 96, angle: -Math.PI/2, target: true }
+    ],
+    parkedCars: [],
+    traffic: [],
+    player: { x: 640, y: 620, angle: -Math.PI/2 },
+    target: { x: 640, y: 120, angle: -Math.PI/2 }
   }
 ];
 
@@ -2612,8 +2730,8 @@ const UI = (function(){
     { id:'g30', name:'Kai Nakamura',    flag:'\uD83C\uDDEF\uD83C\uDDF5', initials:'KN', country:'Fukuoka' }
   ];
   // Per-stage base (fastest) + spread (slowest-fastest). Tuned against level target times.
-  const LB_BASES   = { 1: 10.12, 2: 20.14, 3: 32.45, 4: 44.12, 5: 41.12 };
-  const LB_SPREADS = { 1:  7.33, 2: 12.44, 3: 22.67, 4: 24.80, 5: 21.36 };
+  const LB_BASES   = { 1: 10.12, 2: 20.14, 3: 32.45, 4: 44.12, 5: 41.12, 6: 31.22, 7: 14.88, 8: 23.45 };
+  const LB_SPREADS = { 1:  7.33, 2: 12.44, 3: 22.67, 4: 24.80, 5: 21.36, 6: 18.55, 7: 11.22, 8: 14.80 };
   const LB_FAKE_TOTAL = 12489; // Visual "global drivers" count
 
   function lbGhostTime(stageId, idx){
@@ -2939,6 +3057,10 @@ const Game = (function(){
       x: level.player.x, y: level.player.y, angle: level.player.angle,
       color: '#f28cc7', isPlayer: true
     });
+    // Apply per-level surface (ice = reduced grip, harder to stop/turn).
+    if(level.surface === 'ice'){
+      player.grip = 0.35;
+    }
     parkedCars = (level.parkedCars || []).map(function(c){
       return Car.make({ x:c.x, y:c.y, angle:c.angle, color:c.color });
     });
