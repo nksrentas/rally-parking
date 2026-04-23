@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Parking Zen — Leaderboard Prototypes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   Shared Rally palette + typography
+   ========================================================= */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:       #f4ead8;
+  --bg-2:     #ece1ce;
+  --bg-3:     #e0d4bb;
+  --ink:      #1a1410;
+  --ink-2:    #3a2f26;
+  --ink-3:    #6b5c4e;
+  --pink:     #ff3d7f;
+  --pink-ink: #b92a5f;
+  --pink-soft:#ffbfd4;
+  --yellow:   #ffd23a;
+  --gold:     #e5a93a;
+  --asphalt:  #2a231e;
+  --line:     rgba(26,20,16,0.18);
+  --line-2:   rgba(26,20,16,0.08);
+  --mint:     #86c7a3;
+  --mint-deep:#3e6a55;
+  --blood:    #d32e4a;
+  --sky:      #68a3c6;
+
+  --font-display: "Anton", "Impact", sans-serif;
+  --font-body:    "Space Grotesk", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", Consolas, monospace;
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --skew: -4deg;
+}
+html,body{
+  min-height:100%;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:14px;
+  font-weight:500;
+  letter-spacing:0.005em;
+  font-feature-settings:"tnum";
+}
+
+/* =========================================================
+   Tab bar
+   ========================================================= */
+.tabs-bar{
+  position:sticky;top:0;z-index:50;
+  background:var(--ink);
+  border-bottom:4px solid var(--pink);
+  padding:14px 24px;
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+}
+.tabs-bar .meta{
+  font-family:var(--font-mono);
+  font-size:10px;letter-spacing:0.24em;text-transform:uppercase;
+  color:var(--yellow);
+  margin-right:auto;
+}
+.tabs-bar input{display:none}
+.tabs-bar label{
+  font-family:var(--font-body);
+  font-weight:800;font-size:11px;
+  letter-spacing:0.22em;text-transform:uppercase;
+  padding:10px 18px;
+  border:2px solid rgba(244,234,216,0.25);
+  color:var(--bg);
+  cursor:pointer;
+  transition: all 0.2s ease;
+  background:transparent;
+}
+.tabs-bar label:hover{color:var(--yellow);border-color:var(--yellow)}
+#tab-a:checked ~ .tabs-bar label[for="tab-a"],
+#tab-b:checked ~ .tabs-bar label[for="tab-b"],
+#tab-c:checked ~ .tabs-bar label[for="tab-c"]{
+  background:var(--pink);color:var(--ink);border-color:var(--pink);
+  box-shadow: 3px 3px 0 var(--bg);
+}
+.proto{display:none}
+#tab-a:checked ~ .proto-a{display:block}
+#tab-b:checked ~ .proto-b{display:block}
+#tab-c:checked ~ .proto-c{display:block}
+
+.proto-head{
+  padding:28px 24px 12px;
+  text-align:center;
+  border-bottom:1px dashed var(--line);
+  background:var(--bg-2);
+}
+.proto-name{
+  font-family:var(--font-mono);
+  font-size:10px;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--pink-ink);margin-bottom:8px;font-weight:700;
+}
+.proto-desc{
+  font-size:13px;color:var(--ink-2);
+  max-width:640px;margin:0 auto;line-height:1.5;
+}
+
+.canvas{
+  max-width:1160px;
+  margin:28px auto 56px;
+  padding:0 24px;
+}
+
+/* =========================================================
+   Shared building blocks
+   ========================================================= */
+.plate{
+  display:inline-block;
+  background:var(--yellow);color:var(--ink);
+  font-family:var(--font-body);font-weight:800;
+  font-size:10px;letter-spacing:0.26em;text-transform:uppercase;
+  padding:6px 12px;
+  border:2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.plate.pink{ background:var(--pink); color:var(--bg) }
+.plate.mint{ background:var(--mint) }
+.plate.sky{ background:var(--sky); color:var(--bg) }
+.plate.gold{ background:var(--gold); color:var(--bg) }
+
+.mono-lbl{
+  font-family:var(--font-body);
+  font-weight:700;font-size:9px;
+  letter-spacing:0.28em;text-transform:uppercase;
+  color:var(--ink-2);
+}
+
+.btn{
+  background:transparent;color:var(--ink);
+  border:2px solid var(--ink);
+  padding:10px 16px;cursor:pointer;
+  font-family:var(--font-body);font-weight:800;
+  font-size:10px;letter-spacing:0.22em;text-transform:uppercase;
+  transition: all 0.15s ease;
+}
+.btn:hover{ background:var(--ink);color:var(--bg) }
+.btn.pink{ background:var(--pink);color:var(--bg);border-color:var(--ink) }
+.btn.pink:hover{ background:var(--ink);color:var(--pink) }
+
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--bg);
+  border:2px solid var(--ink);
+  padding:7px 12px;
+  font-family:var(--font-body);font-weight:700;
+  font-size:10px;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--ink);cursor:pointer;
+  transition: all 0.15s ease;
+}
+.chip:hover{ background:var(--bg-2) }
+.chip.on{ background:var(--ink); color:var(--bg); border-color:var(--ink) }
+.chip.on.pink-on{ background:var(--pink); color:var(--bg); border-color:var(--ink) }
+.chip .n{
+  font-family:var(--font-mono);
+  font-size:9px;opacity:0.7;
+}
+
+.avatar{
+  width:38px; height:38px;
+  background:var(--bg-3);
+  border:2px solid var(--ink);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-style:italic;
+  font-size:18px;line-height:1;
+  transform:skewX(var(--skew));
+  flex:0 0 38px;
+  color:var(--ink);
+}
+.avatar span{ transform:skewX(calc(var(--skew) * -1)); display:inline-block }
+.avatar.pink{ background:var(--pink); color:var(--bg) }
+.avatar.yellow{ background:var(--yellow) }
+.avatar.mint{ background:var(--mint) }
+.avatar.sky{ background:var(--sky); color:var(--bg) }
+.avatar.gold{ background:var(--gold); color:var(--bg) }
+
+.flag{
+  font-size:16px;
+  line-height:1;
+  display:inline-block;
+  filter:drop-shadow(1px 1px 0 rgba(26,20,16,0.2));
+}
+
+.skew-title{
+  font-family:var(--font-display);font-style:italic;
+  color:var(--ink);text-transform:uppercase;
+  line-height:0.86;letter-spacing:-0.01em;
+  transform:skewX(var(--skew));
+  display:inline-block;
+}
+
+/* =========================================================
+   PROTOTYPE A — GRAND PRIX STANDINGS
+   Classic racing leaderboard with podium + filters + pinned you row
+   ========================================================= */
+.a-hero{
+  background:
+    linear-gradient(135deg, transparent 48%, rgba(255,61,127,0.14) 48%, rgba(255,61,127,0.14) 52%, transparent 52%),
+    var(--bg);
+  border:3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding:32px 32px 28px;
+  margin-bottom:24px;
+}
+.a-hero .top{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  gap:24px;flex-wrap:wrap;margin-bottom:22px;
+}
+.a-hero .lhs{flex:1;min-width:280px}
+.a-hero .tag-row{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  font-family:var(--font-mono);font-size:11px;
+  letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--ink-2);margin-bottom:12px;
+}
+.a-hero h1{
+  font-family:var(--font-display);font-style:italic;
+  font-size:clamp(46px, 7vw, 78px);line-height:0.86;
+  letter-spacing:-0.01em;color:var(--ink);
+  text-transform:uppercase;
+  transform:skewX(var(--skew));
+  display:inline-block;
+}
+.a-hero h1 .stage{color:var(--pink)}
+.a-hero .rhs{
+  font-family:var(--font-mono);text-align:right;min-width:180px;
+}
+.a-hero .rhs .lbl{
+  font-size:11px;letter-spacing:0.24em;text-transform:uppercase;
+  color:var(--ink-2);margin-bottom:4px;
+}
+.a-hero .rhs .val{
+  font-family:var(--font-display);font-style:italic;
+  font-size:44px;line-height:1;color:var(--ink);
+  transform:skewX(var(--skew));display:inline-block;
+}
+.a-hero .rhs .val .slash{color:var(--ink-2);opacity:0.5}
+.a-hero .filters{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+}
+.a-hero .div{
+  width:1px;height:18px;background:var(--line);margin:0 4px;
+}
+
+.podium{
+  display:grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  gap:14px;align-items:end;
+  margin-bottom:24px;
+}
+.pod{
+  background:var(--bg);
+  border:3px solid var(--ink);
+  padding:22px 20px 20px;
+  text-align:center;position:relative;
+  transition: transform 0.2s ease;
+}
+.pod:hover{ transform: translateY(-3px) }
+.pod .rank{
+  position:absolute;top:-16px;left:50%;transform:translateX(-50%);
+  font-family:var(--font-body);font-weight:800;font-size:11px;
+  letter-spacing:0.28em;text-transform:uppercase;
+  padding:6px 14px;border:2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.pod.p1{
+  background:var(--pink);
+  border-width:4px;
+  box-shadow: 8px 8px 0 var(--ink);
+  padding-top:32px;padding-bottom:28px;
+}
+.pod.p1 .rank{ background:var(--ink);color:var(--yellow);border-color:var(--ink) }
+.pod.p1 .name{ color:var(--bg) }
+.pod.p1 .time{ color:var(--bg) }
+.pod.p1 .avatar{ background:var(--bg); border-color:var(--ink) }
+.pod.p1 .detail{ color:var(--bg) }
+.pod.p2 .rank{ background:var(--bg); color:var(--ink) }
+.pod.p3 .rank{ background:var(--gold); color:var(--ink) }
+.pod .avatar{
+  width:64px;height:64px;font-size:28px;
+  margin:0 auto 14px;flex:unset;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.pod .name{
+  font-family:var(--font-display);font-style:italic;
+  font-size:26px;line-height:0.95;color:var(--ink);
+  text-transform:uppercase;transform:skewX(var(--skew));
+  display:inline-block;letter-spacing:-0.005em;
+}
+.pod .loc{
+  display:flex;justify-content:center;align-items:center;gap:6px;
+  margin:4px 0 14px;
+  font-family:var(--font-body);font-weight:600;
+  font-size:11px;letter-spacing:0.16em;text-transform:uppercase;
+  color:var(--ink-2);
+}
+.pod.p1 .loc{ color:rgba(244,234,216,0.8) }
+.pod .time{
+  font-family:var(--font-mono);font-weight:600;
+  font-size:24px;color:var(--ink);
+  letter-spacing:-0.02em;line-height:1;
+}
+.pod .detail{
+  font-family:var(--font-body);font-weight:700;
+  font-size:10px;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--ink-2);margin-top:8px;
+}
+
+.a-board{
+  background:var(--bg);
+  border:3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  margin-bottom:24px;
+}
+.a-board-head{
+  display:grid;
+  grid-template-columns: 60px 46px 1fr auto 110px 100px;
+  gap:16px;align-items:center;
+  padding:14px 24px;
+  background:var(--asphalt);
+  color:var(--bg);
+  border-bottom:3px solid var(--ink);
+  font-family:var(--font-body);font-weight:800;
+  font-size:9px;letter-spacing:0.28em;text-transform:uppercase;
+}
+.a-board-head > *{ color:var(--yellow) }
+.a-row{
+  display:grid;
+  grid-template-columns: 60px 46px 1fr auto 110px 100px;
+  gap:16px;align-items:center;
+  padding:14px 24px;
+  border-bottom:1px solid var(--line);
+  background:var(--bg);
+  transition: background 0.12s ease;
+  cursor:pointer;
+}
+.a-row:hover{ background:var(--bg-2) }
+.a-row:last-of-type{ border-bottom:none }
+.a-row .rk{
+  font-family:var(--font-display);font-style:italic;
+  font-size:28px;color:var(--ink);line-height:1;
+  transform:skewX(var(--skew));display:inline-block;
+}
+.a-row .name{
+  display:flex;align-items:center;gap:10px;min-width:0;
+}
+.a-row .name .txt{
+  font-family:var(--font-body);font-weight:700;
+  font-size:14px;color:var(--ink);letter-spacing:0.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.a-row .stars{display:flex;gap:2px}
+.a-row .stars .star{font-size:13px;color:var(--line)}
+.a-row .stars .star.on{color:var(--pink)}
+.a-row .time{
+  font-family:var(--font-mono);font-weight:600;
+  font-size:16px;color:var(--ink);letter-spacing:-0.01em;
+  text-align:right;
+}
+.a-row .gap{
+  font-family:var(--font-mono);font-weight:500;
+  font-size:12px;color:var(--ink-2);
+  letter-spacing:0.02em;text-align:right;
+}
+.a-row .gap.leader{ color:var(--pink);font-weight:700 }
+
+.a-row.you{
+  background:var(--yellow);
+  border-left:6px solid var(--ink);
+  position:sticky;bottom:0;
+  box-shadow: 0 -6px 16px rgba(26,20,16,0.15);
+}
+.a-row.you:hover{ background:var(--yellow) }
+.a-row.you .rk{ color:var(--ink) }
+.a-row.you::before{
+  content:"YOU";
+  position:absolute;left:-2px;top:50%;transform:translateY(-50%) rotate(-90deg);
+  font-family:var(--font-body);font-weight:800;font-size:9px;
+  letter-spacing:0.3em;color:var(--ink);opacity:0.35;
+}
+
+.a-pagination{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 24px;background:var(--bg-2);
+  border-top:2px solid var(--ink);
+  font-family:var(--font-mono);font-size:11px;
+  letter-spacing:0.14em;color:var(--ink-2);text-transform:uppercase;
+}
+.a-pagination .ctrl{display:flex;gap:8px}
+
+/* =========================================================
+   PROTOTYPE B — TIME ATTACK GHOST
+   Data-dense comparison view with personal card + deltas
+   ========================================================= */
+.b-wrap{
+  display:grid;
+  grid-template-columns: 320px 1fr;
+  gap:24px;
+  align-items:start;
+}
+@media (max-width:900px){
+  .b-wrap{ grid-template-columns: 1fr }
+}
+.b-me{
+  background:var(--ink);
+  color:var(--bg);
+  border:3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--pink);
+  position:relative;
+  overflow:hidden;
+}
+.b-me::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:5px;
+  background:repeating-linear-gradient(90deg,
+    var(--pink) 0 20%, var(--yellow) 20% 40%,
+    var(--bg) 40% 60%, var(--yellow) 60% 80%, var(--pink) 80% 100%);
+}
+.b-me-head{
+  padding:28px 24px 20px;
+  border-bottom:2px dashed rgba(244,234,216,0.2);
+}
+.b-me-head .lbl{
+  font-family:var(--font-mono);font-size:10px;
+  letter-spacing:0.28em;text-transform:uppercase;
+  color:var(--yellow);margin-bottom:12px;font-weight:600;
+}
+.b-me-id{
+  display:flex;align-items:center;gap:14px;margin-bottom:16px;
+}
+.b-me-id .avatar{
+  width:56px;height:56px;font-size:26px;flex:0 0 56px;
+  background:var(--pink);border-color:var(--bg);color:var(--ink);
+}
+.b-me-name{
+  font-family:var(--font-display);font-style:italic;
+  font-size:30px;line-height:0.9;color:var(--bg);
+  text-transform:uppercase;
+  transform:skewX(var(--skew));display:inline-block;
+  letter-spacing:-0.01em;
+}
+.b-me-loc{
+  font-family:var(--font-mono);font-size:11px;
+  letter-spacing:0.14em;color:rgba(244,234,216,0.65);
+  margin-top:4px;
+}
+.b-me-rank{
+  display:flex;align-items:baseline;gap:10px;
+  margin-top:8px;
+}
+.b-me-rank .hash{
+  font-family:var(--font-display);font-style:italic;
+  font-size:76px;color:var(--pink);line-height:0.86;
+  transform:skewX(var(--skew));display:inline-block;
+  letter-spacing:-0.02em;
+}
+.b-me-rank .of{
+  font-family:var(--font-mono);font-size:12px;
+  letter-spacing:0.14em;color:rgba(244,234,216,0.55);
+}
+.b-me-rank .of b{ color:var(--bg);font-weight:500 }
+.b-me-percentile{
+  font-family:var(--font-body);font-weight:700;
+  font-size:11px;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--yellow);margin-top:4px;
+}
+
+.b-me-stages{
+  padding:16px 24px 22px;
+}
+.b-me-stages h4{
+  font-family:var(--font-mono);font-size:10px;
+  letter-spacing:0.28em;text-transform:uppercase;
+  color:var(--yellow);margin-bottom:12px;font-weight:600;
+}
+.b-stage-line{
+  display:grid;
+  grid-template-columns: 26px 1fr auto auto;
+  gap:10px;align-items:center;
+  padding:8px 0;
+  border-top:1px dashed rgba(244,234,216,0.12);
+}
+.b-stage-line:first-of-type{border-top:none}
+.b-stage-line .num{
+  font-family:var(--font-display);font-style:italic;
+  font-size:18px;color:var(--pink);line-height:1;
+  transform:skewX(var(--skew));display:inline-block;
+}
+.b-stage-line .nm{
+  font-family:var(--font-body);font-weight:700;
+  font-size:12px;color:var(--bg);letter-spacing:0.06em;
+}
+.b-stage-line .pb{
+  font-family:var(--font-mono);font-weight:500;
+  font-size:13px;color:var(--bg);letter-spacing:-0.01em;
+}
+.b-stage-line .rk{
+  font-family:var(--font-mono);font-weight:500;font-size:11px;
+  color:rgba(244,234,216,0.6);
+  letter-spacing:0.08em;
+}
+
+.b-right{min-width:0}
+.b-right-head{
+  background:var(--bg);
+  border:3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding:20px 24px;
+  margin-bottom:20px;
+}
+.b-stage-tabs{
+  display:flex;gap:0;flex-wrap:wrap;
+  margin-top:14px;
+}
+.b-stage-tab{
+  display:inline-flex;align-items:baseline;gap:8px;
+  padding:10px 14px;
+  border:2px solid var(--ink);
+  background:var(--bg);cursor:pointer;
+  font-family:var(--font-body);font-weight:700;
+  font-size:10px;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--ink);
+  transition: all 0.15s ease;
+}
+.b-stage-tab + .b-stage-tab{margin-left:-2px}
+.b-stage-tab:hover{ background:var(--bg-2) }
+.b-stage-tab .nm-num{
+  font-family:var(--font-display);font-style:italic;
+  font-size:16px;line-height:1;
+  transform:skewX(var(--skew));display:inline-block;
+}
+.b-stage-tab.on{
+  background:var(--pink);color:var(--bg);border-color:var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.b-board{
+  background:var(--bg);
+  border:3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+.b-board-head{
+  display:grid;
+  grid-template-columns: 50px 40px 1fr 90px 90px 110px;
+  gap:12px;align-items:center;
+  padding:14px 22px;
+  background:var(--asphalt);color:var(--yellow);
+  border-bottom:3px solid var(--ink);
+  font-family:var(--font-body);font-weight:800;
+  font-size:9px;letter-spacing:0.26em;text-transform:uppercase;
+}
+.b-row{
+  display:grid;
+  grid-template-columns: 50px 40px 1fr 90px 90px 110px;
+  gap:12px;align-items:center;
+  padding:12px 22px;
+  border-bottom:1px solid var(--line);
+  background:var(--bg);
+  transition: background 0.12s ease;
+}
+.b-row:last-of-type{border-bottom:none}
+.b-row:hover{ background:var(--bg-2) }
+.b-row .rk{
+  font-family:var(--font-display);font-style:italic;
+  font-size:22px;color:var(--ink);line-height:1;
+  transform:skewX(var(--skew));display:inline-block;
+}
+.b-row .avatar{ width:32px; height:32px; flex:0 0 32px; font-size:15px }
+.b-row .name{
+  display:flex;align-items:center;gap:8px;min-width:0;
+  font-family:var(--font-body);font-weight:700;font-size:13px;
+  color:var(--ink);
+}
+.b-row .name .flag{font-size:14px}
+.b-row .time{
+  font-family:var(--font-mono);font-weight:600;
+  font-size:14px;color:var(--ink);letter-spacing:-0.01em;
+  text-align:right;
+}
+.b-row .delta{
+  font-family:var(--font-mono);font-weight:700;
+  font-size:13px;letter-spacing:-0.01em;
+  text-align:right;
+}
+.b-row .delta.ahead{ color:var(--blood) }
+.b-row .delta.behind{ color:var(--mint-deep) }
+.b-row .delta.tie{ color:var(--ink-2) }
+.b-row .ghost-btn{
+  background:transparent;
+  border:2px solid var(--ink);
+  padding:7px 10px;cursor:pointer;
+  font-family:var(--font-body);font-weight:800;
+  font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--ink);
+}
+.b-row .ghost-btn:hover{ background:var(--pink);color:var(--bg);border-color:var(--pink) }
+.b-row.you{
+  background:var(--yellow);
+  border-left:6px solid var(--ink);
+  position:relative;
+}
+.b-row.you:hover{ background:var(--yellow) }
+.b-row.you .delta{ color:var(--ink);font-weight:800 }
+
+/* =========================================================
+   PROTOTYPE C — RALLY CLUB (social)
+   Tabs for World/Friends/Rivals with activity feed + head-to-head
+   ========================================================= */
+.c-head{
+  background:var(--bg);
+  border:3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding:26px 30px;
+  margin-bottom:20px;
+  display:flex;justify-content:space-between;align-items:center;
+  gap:16px;flex-wrap:wrap;
+}
+.c-head .plate{ background:var(--mint) }
+.c-head h1{
+  font-family:var(--font-display);font-style:italic;
+  font-size:clamp(42px, 6vw, 64px);line-height:0.9;
+  transform:skewX(var(--skew));display:inline-block;
+  text-transform:uppercase;letter-spacing:-0.01em;
+  color:var(--ink);
+  margin-top:8px;
+}
+.c-head h1 .dot{color:var(--pink)}
+.c-head .rhs{text-align:right}
+.c-head .rhs .n{
+  font-family:var(--font-mono);font-size:11px;
+  letter-spacing:0.24em;text-transform:uppercase;
+  color:var(--ink-2);
+}
+.c-head .rhs .v{
+  font-family:var(--font-display);font-style:italic;
+  font-size:38px;line-height:0.9;
+  transform:skewX(var(--skew));display:inline-block;
+  color:var(--pink);
+  letter-spacing:-0.01em;
+}
+
+.c-tabs{
+  display:flex;gap:0;margin-bottom:18px;
+  border-bottom:3px solid var(--ink);
+  flex-wrap:wrap;
+}
+.c-tab{
+  padding:14px 20px;
+  font-family:var(--font-body);font-weight:800;
+  font-size:11px;letter-spacing:0.22em;text-transform:uppercase;
+  color:var(--ink-2);cursor:pointer;
+  background:transparent;border:none;
+  border-bottom:4px solid transparent;
+  margin-bottom:-3px;
+  transition: all 0.15s ease;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.c-tab:hover{ color:var(--ink) }
+.c-tab.on{ color:var(--ink); border-bottom-color:var(--pink) }
+.c-tab .count{
+  font-family:var(--font-mono);font-weight:600;font-size:10px;
+  background:var(--ink);color:var(--bg);
+  padding:2px 7px;letter-spacing:0.08em;
+}
+.c-tab.on .count{ background:var(--pink); color:var(--bg) }
+
+.c-layout{
+  display:grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap:20px;
+}
+@media (max-width:900px){ .c-layout{ grid-template-columns:1fr } }
+
+/* Activity feed */
+.c-feed{
+  background:var(--bg);
+  border:3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  overflow:hidden;
+}
+.c-feed-head{
+  padding:14px 22px;
+  background:var(--asphalt);color:var(--yellow);
+  border-bottom:3px solid var(--ink);
+  font-family:var(--font-body);font-weight:800;
+  font-size:9px;letter-spacing:0.28em;text-transform:uppercase;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.c-feed-item{
+  padding:16px 22px;
+  border-bottom:1px solid var(--line);
+  display:grid;
+  grid-template-columns: 44px 1fr auto;
+  gap:14px;align-items:start;
+  position:relative;
+  cursor:pointer;
+  transition: background 0.12s ease;
+}
+.c-feed-item:hover{ background:var(--bg-2) }
+.c-feed-item:last-of-type{ border-bottom:none }
+.c-feed-item .avatar{ width:44px;height:44px;font-size:20px;flex:unset }
+.c-feed-body .line1{
+  font-family:var(--font-body);font-weight:600;
+  font-size:13px;color:var(--ink);line-height:1.35;margin-bottom:4px;
+}
+.c-feed-body .line1 b{
+  font-weight:800;color:var(--pink-ink);
+}
+.c-feed-body .line2{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  font-family:var(--font-mono);font-size:11px;
+  color:var(--ink-2);letter-spacing:0.06em;
+}
+.c-feed-body .line2 .stage{
+  font-family:var(--font-display);font-style:italic;
+  font-size:16px;color:var(--ink);line-height:1;
+  transform:skewX(var(--skew));display:inline-block;
+  text-transform:uppercase;letter-spacing:0;
+}
+.c-feed-body .line2 .time{
+  font-weight:600;color:var(--ink);font-size:13px;
+}
+.c-feed-body .line2 .rank{
+  font-weight:600;color:var(--pink-ink);
+}
+.c-feed-item .ago{
+  font-family:var(--font-mono);font-size:10px;
+  color:var(--ink-2);letter-spacing:0.08em;
+  text-transform:uppercase;white-space:nowrap;
+  padding-top:4px;
+}
+.c-feed-item .react{
+  grid-column: 1 / -1;
+  display:flex;gap:8px;margin-top:10px;padding-top:10px;
+  border-top:1px dashed var(--line);
+}
+.c-feed-item .react-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--bg);border:1.5px solid var(--line);
+  padding:4px 10px;cursor:pointer;
+  font-family:var(--font-body);font-weight:700;
+  font-size:10px;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--ink-2);transition:all 0.12s ease;
+}
+.c-feed-item .react-btn:hover{ border-color:var(--ink);color:var(--ink) }
+.c-feed-item .react-btn.on{ background:var(--pink);color:var(--bg);border-color:var(--ink) }
+.c-feed-item .react-btn .cnt{
+  font-family:var(--font-mono);font-weight:600;font-size:10px;
+}
+
+/* Rivals panel */
+.c-rivals{
+  background:var(--bg);
+  border:3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  overflow:hidden;
+}
+.c-rivals-head{
+  padding:14px 22px;
+  background:var(--pink);color:var(--bg);
+  border-bottom:3px solid var(--ink);
+  font-family:var(--font-body);font-weight:800;
+  font-size:9px;letter-spacing:0.28em;text-transform:uppercase;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.c-rival{
+  padding:18px 22px;
+  border-bottom:1px solid var(--line);
+  cursor:pointer;
+  transition: background 0.12s ease;
+}
+.c-rival:hover{ background:var(--bg-2) }
+.c-rival:last-of-type{ border-bottom:none }
+.c-rival-top{
+  display:flex;align-items:center;gap:14px;margin-bottom:10px;
+}
+.c-rival-top .avatar{ width:44px;height:44px;font-size:20px;flex:0 0 44px }
+.c-rival-top .n{
+  font-family:var(--font-display);font-style:italic;
+  font-size:22px;line-height:0.95;
+  transform:skewX(var(--skew));display:inline-block;
+  text-transform:uppercase;color:var(--ink);
+  letter-spacing:-0.005em;
+}
+.c-rival-top .meta{
+  font-family:var(--font-mono);font-size:10px;
+  color:var(--ink-2);letter-spacing:0.1em;
+  text-transform:uppercase;
+}
+.c-rival-h2h{
+  display:grid;grid-template-columns: 1fr auto 1fr;
+  align-items:center;gap:12px;
+  font-family:var(--font-mono);
+}
+.c-rival-h2h .me,
+.c-rival-h2h .them{
+  padding:8px 12px;
+  border:2px solid var(--ink);
+  text-align:center;
+}
+.c-rival-h2h .me{
+  background:var(--yellow);color:var(--ink);
+}
+.c-rival-h2h .them{
+  background:var(--bg);color:var(--ink);
+}
+.c-rival-h2h .lbl{
+  font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--ink-2);margin-bottom:2px;
+}
+.c-rival-h2h .val{
+  font-family:var(--font-display);font-style:italic;
+  font-size:22px;line-height:1;
+  transform:skewX(var(--skew));display:inline-block;
+}
+.c-rival-h2h .vs{
+  font-family:var(--font-body);font-weight:800;
+  font-size:12px;letter-spacing:0.28em;text-transform:uppercase;
+  color:var(--pink-ink);
+}
+
+.c-rival .challenge{
+  margin-top:10px;
+  display:flex;justify-content:flex-end;
+}
+.c-rival-add{
+  padding:18px 22px;text-align:center;
+  border-top:1px dashed var(--line);
+  background:var(--bg-2);
+}
+
+.footer{
+  padding:28px 24px 44px;text-align:center;
+  font-family:var(--font-mono);font-size:11px;
+  letter-spacing:0.2em;color:var(--ink-2);
+  border-top:2px solid var(--line);
+  margin-top:20px;
+  background:var(--bg-2);
+}
+</style>
+</head>
+<body>
+
+<input type="radio" name="tab" id="tab-a" checked hidden>
+<input type="radio" name="tab" id="tab-b" hidden>
+<input type="radio" name="tab" id="tab-c" hidden>
+
+<div class="tabs-bar">
+  <span class="meta">Parking Zen / Leaderboard Prototypes</span>
+  <label for="tab-a">A · Grand Prix Standings</label>
+  <label for="tab-b">B · Time Attack Ghost</label>
+  <label for="tab-c">C · Rally Club</label>
+</div>
+
+<!-- =================================================================
+     PROTO A — GRAND PRIX STANDINGS
+     Classic racing board: podium top 3, filter chips, scrollable list,
+     sticky YOU row when you're outside the visible range.
+     ================================================================= -->
+<div class="proto proto-a">
+  <div class="proto-head">
+    <div class="proto-name">Prototype A · Grand Prix Standings</div>
+    <div class="proto-desc">Classic racing leaderboard. Podium for top 3, scrollable list for the rest, filter chips across time and scope (all-time / monthly / friends / near you), your row pinned at the bottom if you're not in the visible range. Familiar from Gran Turismo and Forza.</div>
+  </div>
+
+  <div class="canvas">
+
+    <!-- Hero: stage title + count + filters -->
+    <div class="a-hero">
+      <div class="top">
+        <div class="lhs">
+          <div class="tag-row">
+            <span class="plate">Live board</span>
+            <span>&middot; Updated 12s ago</span>
+            <span>&middot; All times verified</span>
+          </div>
+          <h1><span class="stage">Stage 03 /</span> Parallel</h1>
+        </div>
+        <div class="rhs">
+          <div class="lbl">Drivers</div>
+          <div class="val">12,489</div>
+        </div>
+      </div>
+      <div class="filters">
+        <span class="mono-lbl" style="margin-right:4px">When</span>
+        <button class="chip on pink-on">All Time</button>
+        <button class="chip">Month</button>
+        <button class="chip">Week</button>
+        <button class="chip">Today</button>
+        <span class="div"></span>
+        <span class="mono-lbl" style="margin-right:4px">Who</span>
+        <button class="chip">Global</button>
+        <button class="chip on">Friends <span class="n">12</span></button>
+        <button class="chip">Near Me</button>
+        <button class="chip">Country 🇬🇧</button>
+        <span class="div"></span>
+        <span class="mono-lbl" style="margin-right:4px">Stage</span>
+        <button class="chip">01</button>
+        <button class="chip">02</button>
+        <button class="chip on">03</button>
+        <button class="chip">04</button>
+        <button class="chip">05</button>
+      </div>
+    </div>
+
+    <!-- Podium: top 3 -->
+    <div class="podium">
+      <div class="pod p2">
+        <div class="rank">Rank 02</div>
+        <div class="avatar yellow"><span>MO</span></div>
+        <div class="name">Maria Ochoa</div>
+        <div class="loc"><span class="flag">🇲🇽</span>&middot; Mexico City</div>
+        <div class="time">0:12.78</div>
+        <div class="detail">3★ · Clean · 148 runs</div>
+      </div>
+      <div class="pod p1">
+        <div class="rank">★ Rank 01 ★</div>
+        <div class="avatar pink"><span>TS</span></div>
+        <div class="name">Takeshi Sato</div>
+        <div class="loc"><span class="flag">🇯🇵</span>&middot; Osaka</div>
+        <div class="time">0:12.45</div>
+        <div class="detail">3★ · Clean · 224 runs</div>
+      </div>
+      <div class="pod p3">
+        <div class="rank">Rank 03</div>
+        <div class="avatar gold"><span>JB</span></div>
+        <div class="name">Johan Berg</div>
+        <div class="loc"><span class="flag">🇸🇪</span>&middot; Stockholm</div>
+        <div class="time">0:13.14</div>
+        <div class="detail">3★ · Clean · 96 runs</div>
+      </div>
+    </div>
+
+    <!-- Main board -->
+    <div class="a-board">
+      <div class="a-board-head">
+        <div>Rank</div>
+        <div></div>
+        <div>Driver</div>
+        <div>Stars</div>
+        <div style="text-align:right">Time</div>
+        <div style="text-align:right">Gap</div>
+      </div>
+      <div class="a-row">
+        <div class="rk">04</div>
+        <div class="avatar mint"><span>ZA</span></div>
+        <div class="name"><span class="flag">🇵🇰</span><span class="txt">Zara Ahmed</span></div>
+        <div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div>
+        <div class="time">0:13.42</div>
+        <div class="gap">+0.97</div>
+      </div>
+      <div class="a-row">
+        <div class="rk">05</div>
+        <div class="avatar sky"><span>LV</span></div>
+        <div class="name"><span class="flag">🇫🇮</span><span class="txt">Linnea Virtanen</span></div>
+        <div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div>
+        <div class="time">0:13.58</div>
+        <div class="gap">+1.13</div>
+      </div>
+      <div class="a-row">
+        <div class="rk">06</div>
+        <div class="avatar"><span>RS</span></div>
+        <div class="name"><span class="flag">🇧🇷</span><span class="txt">Rafael Silva</span></div>
+        <div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div>
+        <div class="time">0:13.67</div>
+        <div class="gap">+1.22</div>
+      </div>
+      <div class="a-row">
+        <div class="rk">07</div>
+        <div class="avatar pink"><span>AC</span></div>
+        <div class="name"><span class="flag">🇨🇳</span><span class="txt">Ava Chen</span></div>
+        <div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div>
+        <div class="time">0:13.78</div>
+        <div class="gap">+1.33</div>
+      </div>
+      <div class="a-row">
+        <div class="rk">08</div>
+        <div class="avatar yellow"><span>OA</span></div>
+        <div class="name"><span class="flag">🇳🇬</span><span class="txt">Olu Adeyemi</span></div>
+        <div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div>
+        <div class="time">0:13.91</div>
+        <div class="gap">+1.46</div>
+      </div>
+      <div class="a-row">
+        <div class="rk">09</div>
+        <div class="avatar mint"><span>NP</span></div>
+        <div class="name"><span class="flag">🇷🇺</span><span class="txt">Niko Petrov</span></div>
+        <div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div>
+        <div class="time">0:14.02</div>
+        <div class="gap">+1.57</div>
+      </div>
+      <div class="a-row">
+        <div class="rk">10</div>
+        <div class="avatar sky"><span>SM</span></div>
+        <div class="name"><span class="flag">🇨🇦</span><span class="txt">Sarah Mackenzie</span></div>
+        <div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div>
+        <div class="time">0:14.18</div>
+        <div class="gap">+1.73</div>
+      </div>
+
+      <!-- YOU row — sticky at bottom -->
+      <div class="a-row you">
+        <div class="rk">2,487</div>
+        <div class="avatar pink"><span>ND</span></div>
+        <div class="name"><span class="flag">🇬🇧</span><span class="txt">Nikolaos (you)</span></div>
+        <div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star">★</span></div>
+        <div class="time">0:14.88</div>
+        <div class="gap leader">+2.43</div>
+      </div>
+
+      <div class="a-pagination">
+        <div>Showing 4–10 of 12,489</div>
+        <div class="ctrl">
+          <button class="btn">◀ Prev</button>
+          <button class="btn">Jump to me</button>
+          <button class="btn pink">Next ▶</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =================================================================
+     PROTO B — TIME ATTACK GHOST
+     Personal card + delta-to-you comparison + ghost racing per row.
+     For players who care about their own delta to the top.
+     ================================================================= -->
+<div class="proto proto-b">
+  <div class="proto-head">
+    <div class="proto-name">Prototype B · Time Attack Ghost</div>
+    <div class="proto-desc">Personal-record-obsessed view. Your profile card pinned to the left shows global rank and per-stage PBs. Right side shows the top-10 for the selected stage with a delta column in red (they're ahead) or green (they're behind you). Each row has a "Race Ghost" button to replay their line as a translucent overlay. Inspired by Forza Rivals and Strava segment leaderboards.</div>
+  </div>
+
+  <div class="canvas">
+    <div class="b-wrap">
+
+      <!-- LEFT: personal stats card -->
+      <div class="b-me">
+        <div class="b-me-head">
+          <div class="lbl">Your Driver Card</div>
+          <div class="b-me-id">
+            <div class="avatar"><span>ND</span></div>
+            <div>
+              <div class="b-me-name">Nikolaos</div>
+              <div class="b-me-loc">🇬🇧 London &middot; Joined Mar 2026</div>
+            </div>
+          </div>
+          <div class="b-me-rank">
+            <span class="hash">#2,487</span>
+            <span class="of">of <b>12,489</b><br>top 20%</span>
+          </div>
+          <div class="b-me-percentile">Better than 80% of drivers</div>
+        </div>
+        <div class="b-me-stages">
+          <h4>Personal Bests</h4>
+          <div class="b-stage-line">
+            <span class="num">01</span>
+            <span class="nm">Empty Lot</span>
+            <span class="pb">0:12.45</span>
+            <span class="rk">#18</span>
+          </div>
+          <div class="b-stage-line">
+            <span class="num">02</span>
+            <span class="nm">Between Two</span>
+            <span class="pb">0:24.12</span>
+            <span class="rk">#412</span>
+          </div>
+          <div class="b-stage-line">
+            <span class="num">03</span>
+            <span class="nm">Parallel</span>
+            <span class="pb">0:14.88</span>
+            <span class="rk">#2,487</span>
+          </div>
+          <div class="b-stage-line">
+            <span class="num">04</span>
+            <span class="nm">Tight Reverse</span>
+            <span class="pb">0:41.22</span>
+            <span class="rk">#8,104</span>
+          </div>
+          <div class="b-stage-line">
+            <span class="num">05</span>
+            <span class="nm">Three-Point</span>
+            <span class="pb">—</span>
+            <span class="rk">Locked</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: stage tabs + delta board -->
+      <div class="b-right">
+        <div class="b-right-head">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap">
+            <div class="skew-title" style="font-size:44px">Stage 03 / Parallel</div>
+            <div class="mono-lbl">Top 10 &middot; 12,489 drivers</div>
+          </div>
+          <div class="b-stage-tabs">
+            <button class="b-stage-tab"><span class="nm-num">01</span> Empty Lot</button>
+            <button class="b-stage-tab"><span class="nm-num">02</span> Between</button>
+            <button class="b-stage-tab on"><span class="nm-num">03</span> Parallel</button>
+            <button class="b-stage-tab"><span class="nm-num">04</span> Reverse</button>
+            <button class="b-stage-tab"><span class="nm-num">05</span> 3-Point</button>
+          </div>
+        </div>
+
+        <div class="b-board">
+          <div class="b-board-head">
+            <div>Rank</div>
+            <div></div>
+            <div>Driver</div>
+            <div style="text-align:right">Time</div>
+            <div style="text-align:right">vs You</div>
+            <div style="text-align:right">Action</div>
+          </div>
+          <div class="b-row">
+            <div class="rk">01</div>
+            <div class="avatar pink"><span>TS</span></div>
+            <div class="name"><span class="flag">🇯🇵</span> Takeshi Sato</div>
+            <div class="time">0:12.45</div>
+            <div class="delta ahead">−2.43s</div>
+            <div style="text-align:right"><button class="ghost-btn">Race Ghost</button></div>
+          </div>
+          <div class="b-row">
+            <div class="rk">02</div>
+            <div class="avatar yellow"><span>MO</span></div>
+            <div class="name"><span class="flag">🇲🇽</span> Maria Ochoa</div>
+            <div class="time">0:12.78</div>
+            <div class="delta ahead">−2.10s</div>
+            <div style="text-align:right"><button class="ghost-btn">Race Ghost</button></div>
+          </div>
+          <div class="b-row">
+            <div class="rk">03</div>
+            <div class="avatar gold"><span>JB</span></div>
+            <div class="name"><span class="flag">🇸🇪</span> Johan Berg</div>
+            <div class="time">0:13.14</div>
+            <div class="delta ahead">−1.74s</div>
+            <div style="text-align:right"><button class="ghost-btn">Race Ghost</button></div>
+          </div>
+          <div class="b-row">
+            <div class="rk">04</div>
+            <div class="avatar mint"><span>ZA</span></div>
+            <div class="name"><span class="flag">🇵🇰</span> Zara Ahmed</div>
+            <div class="time">0:13.42</div>
+            <div class="delta ahead">−1.46s</div>
+            <div style="text-align:right"><button class="ghost-btn">Race Ghost</button></div>
+          </div>
+          <div class="b-row">
+            <div class="rk">05</div>
+            <div class="avatar sky"><span>LV</span></div>
+            <div class="name"><span class="flag">🇫🇮</span> Linnea Virtanen</div>
+            <div class="time">0:13.58</div>
+            <div class="delta ahead">−1.30s</div>
+            <div style="text-align:right"><button class="ghost-btn">Race Ghost</button></div>
+          </div>
+          <div class="b-row you">
+            <div class="rk">2,487</div>
+            <div class="avatar pink"><span>ND</span></div>
+            <div class="name"><span class="flag">🇬🇧</span> Nikolaos (you)</div>
+            <div class="time">0:14.88</div>
+            <div class="delta tie">0.00</div>
+            <div style="text-align:right"><button class="ghost-btn">Retry</button></div>
+          </div>
+          <div class="b-row">
+            <div class="rk">2,488</div>
+            <div class="avatar"><span>YT</span></div>
+            <div class="name"><span class="flag">🇯🇵</span> Yuki Tanaka</div>
+            <div class="time">0:14.89</div>
+            <div class="delta behind">+0.01s</div>
+            <div style="text-align:right"><button class="ghost-btn">Race Ghost</button></div>
+          </div>
+          <div class="b-row">
+            <div class="rk">2,501</div>
+            <div class="avatar mint"><span>PR</span></div>
+            <div class="name"><span class="flag">🇮🇳</span> Priya Reddy</div>
+            <div class="time">0:14.95</div>
+            <div class="delta behind">+0.07s</div>
+            <div style="text-align:right"><button class="ghost-btn">Race Ghost</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================
+     PROTO C — RALLY CLUB (social)
+     Tabs: World / Friends / Rivals / Me.
+     Feed-style "Sarah beat your time on Stage 03" updates.
+     Head-to-head W-L scorecard against tracked rivals.
+     ================================================================= -->
+<div class="proto proto-c">
+  <div class="proto-head">
+    <div class="proto-name">Prototype C · Rally Club (Social)</div>
+    <div class="proto-desc">Social and activity-driven. Tabs switch between World / Friends / Rivals / Me. Friends view shows a feed of recent runs with kudos and comments. Rivals panel tracks head-to-head W-L records against drivers you've chosen to follow specifically. Inspired by Strava segments, Peloton leaderboards, and Apple Fitness+ competitions.</div>
+  </div>
+
+  <div class="canvas">
+
+    <!-- Header strip -->
+    <div class="c-head">
+      <div>
+        <div class="plate">Rally Club</div>
+        <h1>Friends<span class="dot">.</span></h1>
+      </div>
+      <div class="rhs">
+        <div class="n">Weekly Kudos</div>
+        <div class="v">+38</div>
+      </div>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="c-tabs">
+      <button class="c-tab">World <span class="count">12.4K</span></button>
+      <button class="c-tab on">Friends <span class="count">12</span></button>
+      <button class="c-tab">Rivals <span class="count">3</span></button>
+      <button class="c-tab">Me</button>
+    </div>
+
+    <!-- Main two-column layout -->
+    <div class="c-layout">
+
+      <!-- Activity feed -->
+      <div class="c-feed">
+        <div class="c-feed-head">
+          <span>Recent Activity · 12 Friends</span>
+          <span style="color:var(--bg);opacity:0.5">This Week</span>
+        </div>
+
+        <div class="c-feed-item">
+          <div class="avatar sky"><span>SM</span></div>
+          <div class="c-feed-body">
+            <div class="line1"><b>Sarah Mackenzie</b> beat your time on <span class="stage">Stage 03</span></div>
+            <div class="line2">
+              <span class="time">0:14.12</span>
+              <span>·</span>
+              <span class="rank">#1,842</span>
+              <span>·</span>
+              <span>3★ clean</span>
+              <span>·</span>
+              <span>+0.76s ahead of you</span>
+            </div>
+          </div>
+          <div class="ago">12m</div>
+          <div class="react">
+            <button class="react-btn on">🔥 Kudos <span class="cnt">4</span></button>
+            <button class="react-btn">💬 Comment <span class="cnt">1</span></button>
+            <button class="react-btn">⚡ Challenge</button>
+          </div>
+        </div>
+
+        <div class="c-feed-item">
+          <div class="avatar yellow"><span>MO</span></div>
+          <div class="c-feed-body">
+            <div class="line1"><b>Maria Ochoa</b> took 2nd globally on <span class="stage">Stage 03</span></div>
+            <div class="line2">
+              <span class="time">0:12.78</span>
+              <span>·</span>
+              <span class="rank">#2 🏆</span>
+              <span>·</span>
+              <span>3★ clean</span>
+            </div>
+          </div>
+          <div class="ago">48m</div>
+          <div class="react">
+            <button class="react-btn">🔥 Kudos <span class="cnt">127</span></button>
+            <button class="react-btn">💬 Comment <span class="cnt">14</span></button>
+          </div>
+        </div>
+
+        <div class="c-feed-item">
+          <div class="avatar mint"><span>ZA</span></div>
+          <div class="c-feed-body">
+            <div class="line1"><b>Zara Ahmed</b> unlocked <span class="stage">Stage 05</span></div>
+            <div class="line2">
+              <span>3 of 5 stages cleared</span>
+              <span>·</span>
+              <span>9★ total</span>
+            </div>
+          </div>
+          <div class="ago">2h</div>
+          <div class="react">
+            <button class="react-btn">🔥 Kudos <span class="cnt">8</span></button>
+          </div>
+        </div>
+
+        <div class="c-feed-item">
+          <div class="avatar"><span>RS</span></div>
+          <div class="c-feed-body">
+            <div class="line1"><b>Rafael Silva</b> set a new PB on <span class="stage">Stage 04</span></div>
+            <div class="line2">
+              <span class="time">0:38.44</span>
+              <span>·</span>
+              <span class="rank">#298</span>
+              <span>·</span>
+              <span>3★ · 0 hits</span>
+            </div>
+          </div>
+          <div class="ago">5h</div>
+          <div class="react">
+            <button class="react-btn">🔥 Kudos <span class="cnt">3</span></button>
+            <button class="react-btn">💬 Comment</button>
+          </div>
+        </div>
+
+        <div class="c-feed-item">
+          <div class="avatar pink"><span>AC</span></div>
+          <div class="c-feed-body">
+            <div class="line1"><b>Ava Chen</b> challenged you on <span class="stage">Stage 02</span></div>
+            <div class="line2">
+              <span class="time">0:23.89</span>
+              <span>·</span>
+              <span class="rank">#44</span>
+              <span>·</span>
+              <span>0.23s ahead of you</span>
+            </div>
+          </div>
+          <div class="ago">Yesterday</div>
+          <div class="react">
+            <button class="react-btn">🔥 Kudos <span class="cnt">2</span></button>
+            <button class="react-btn on">⚡ Accept Challenge</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rivals panel -->
+      <div class="c-rivals">
+        <div class="c-rivals-head">
+          <span>Rivals · Head to Head</span>
+          <span>Tracking 3</span>
+        </div>
+
+        <div class="c-rival">
+          <div class="c-rival-top">
+            <div class="avatar sky"><span>SM</span></div>
+            <div>
+              <div class="n">Sarah Mackenzie</div>
+              <div class="meta">🇨🇦 Canada · 47 runs together</div>
+            </div>
+          </div>
+          <div class="c-rival-h2h">
+            <div class="me">
+              <div class="lbl">You</div>
+              <div class="val">2</div>
+            </div>
+            <div class="vs">vs</div>
+            <div class="them">
+              <div class="lbl">Her</div>
+              <div class="val">3</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="c-rival">
+          <div class="c-rival-top">
+            <div class="avatar pink"><span>AC</span></div>
+            <div>
+              <div class="n">Ava Chen</div>
+              <div class="meta">🇨🇳 China · 22 runs together</div>
+            </div>
+          </div>
+          <div class="c-rival-h2h">
+            <div class="me">
+              <div class="lbl">You</div>
+              <div class="val">3</div>
+            </div>
+            <div class="vs">vs</div>
+            <div class="them">
+              <div class="lbl">Her</div>
+              <div class="val">1</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="c-rival">
+          <div class="c-rival-top">
+            <div class="avatar gold"><span>DR</span></div>
+            <div>
+              <div class="n">Dimitri Rossi</div>
+              <div class="meta">🇮🇹 Italy · 8 runs together</div>
+            </div>
+          </div>
+          <div class="c-rival-h2h">
+            <div class="me">
+              <div class="lbl">You</div>
+              <div class="val">0</div>
+            </div>
+            <div class="vs">vs</div>
+            <div class="them">
+              <div class="lbl">Him</div>
+              <div class="val">4</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="c-rival-add">
+          <button class="btn pink">+ Add Rival</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  Parking Zen · Leaderboard Prototypes · Anton / Space Grotesk / JetBrains Mono
+</div>
+
+</body>
+</html>
