@@ -1362,9 +1362,9 @@ const Storage = (function(){
     state = Object.assign({}, defaults, { levels:{} });
     save();
   }
-  function recordWin(id, time, damage){
+  function recordWin(id, time, damage, ghostFrames){
     const s = get();
-    const prev = s.levels[id] || { bestTime:null, bestStars:0, completions:0, cleanRuns:0, topRuns:[] };
+    const prev = s.levels[id] || { bestTime:null, bestStars:0, completions:0, cleanRuns:0, topRuns:[], ghost:null };
     const stars = computeStars(id, time, damage);
     const newBest = prev.bestTime == null ? time : Math.min(prev.bestTime, time);
     const newStars = Math.max(prev.bestStars || 0, stars);
@@ -1375,11 +1375,28 @@ const Storage = (function(){
     topRuns.push({ time: time, damage: damage, stars: stars, when: new Date().toISOString().slice(0,10) });
     topRuns.sort(function(a, b){ return a.time - b.time; });
     while(topRuns.length > 5) topRuns.pop();
-    s.levels[id] = { bestTime:newBest, bestStars:newStars, completions:completions, cleanRuns:cleanRuns, topRuns:topRuns };
+    // Ghost: keep the prior one unless this run is the new best (or first).
+    let ghost = prev.ghost || null;
+    const isNewBest = (prev.bestTime == null) || (time < prev.bestTime);
+    if(isNewBest && ghostFrames && ghostFrames.length >= 2){
+      ghost = { time: time, frames: ghostFrames };
+    }
+    s.levels[id] = {
+      bestTime: newBest, bestStars: newStars,
+      completions: completions, cleanRuns: cleanRuns,
+      topRuns: topRuns, ghost: ghost
+    };
     const prevUnlocked = s.unlocked;
     if(id + 1 > s.unlocked && id + 1 <= LEVELS.length) s.unlocked = id + 1;
     const justUnlocked = s.unlocked > prevUnlocked ? s.unlocked : null;
-    save();
+    // Persist; if we ran over the 5MB localStorage quota (huge ghosts on lots of
+    // levels), drop ghosts to recover and retry once.
+    try {
+      save();
+    } catch(e) {
+      for(const lid in s.levels){ if(s.levels[lid].ghost) s.levels[lid].ghost = null; }
+      try { save(); } catch(e2) {}
+    }
     return {
       stars,
       bestTime: newBest,
@@ -3016,6 +3033,15 @@ const Game = (function(){
   let dpr = 1;
   let lastT = 0;
 
+  // Ghost replay — record current run into memory; on win, if it's a new
+  // best, save it as the level's ghost. On retry/replay, interpolate the
+  // saved ghost's position from the current timer and draw a translucent
+  // copy of the player car so you're racing yourself.
+  let recordingGhost = [];
+  let lastGhostSampleT = 0;
+  let playbackGhost = null;
+  let playbackGhostIdx = 0;
+
   function init(){
     canvas = document.getElementById('game');
     ctx = canvas.getContext('2d');
@@ -3102,13 +3128,30 @@ const Game = (function(){
     winLatch = false;
     shakeAmount = 0;
     cameraX = 0; cameraY = 0;
+
+    // Ghost state reset
+    recordingGhost = [];
+    lastGhostSampleT = 0;
+    playbackGhostIdx = 0;
+    const savedRec = (Storage.get().levels || {})[level.id];
+    playbackGhost = (savedRec && savedRec.ghost && savedRec.ghost.frames && savedRec.ghost.frames.length >= 2)
+      ? savedRec.ghost
+      : null;
+
     Input.reset();
     Audio.resume();
     Audio.startEngine();
     state = 'play';
     UI.startPlay();
     UI.updateHUD(level.id, 0, 0, 0);
-    if(level.tip) UI.showTip(level.tip);
+    if(level.tip){
+      const tipText = playbackGhost
+        ? level.tip + '  \u00b7  Ghost ' + fmtTime(playbackGhost.time)
+        : level.tip;
+      UI.showTip(tipText);
+    } else if(playbackGhost){
+      UI.showTip('Racing your ghost \u00b7 ' + fmtTime(playbackGhost.time));
+    }
   }
 
   function defaultWalls(lv){
@@ -3178,6 +3221,18 @@ const Game = (function(){
 
     player.x = Math.max(-200, Math.min(level.world.w + 200, player.x));
     player.y = Math.max(-200, Math.min(level.world.h + 200, player.y));
+
+    // Ghost recording — 20 Hz snapshot of position/heading for replay.
+    // Rounded to cut JSON size when we eventually write it to localStorage.
+    if(timer - lastGhostSampleT >= 0.05){
+      recordingGhost.push({
+        t: Math.round(timer * 1000) / 1000,
+        x: Math.round(player.x * 10) / 10,
+        y: Math.round(player.y * 10) / 10,
+        a: Math.round(player.angle * 1000) / 1000
+      });
+      lastGhostSampleT = timer;
+    }
 
     // Skid marks: hard steering at speed OR handbrake
     const absV = Math.abs(player.vel);
@@ -3374,7 +3429,14 @@ const Game = (function(){
     state = 'win';
     Audio.stopEngine();
     Audio.chime();
-    const result = Storage.recordWin(level.id, timer, damage);
+    // Snapshot a final sample so the ghost captures the parked pose.
+    recordingGhost.push({
+      t: Math.round(timer * 1000) / 1000,
+      x: Math.round(player.x * 10) / 10,
+      y: Math.round(player.y * 10) / 10,
+      a: Math.round(player.angle * 1000) / 1000
+    });
+    const result = Storage.recordWin(level.id, timer, damage, recordingGhost);
     UI.showWin({
       levelId: level.id,
       stars: result.stars,
@@ -3415,6 +3477,36 @@ const Game = (function(){
     return out;
   }
 
+  // Shortest-path angle interpolation across the [-π, π] wrap.
+  function lerpAngle(a, b, t){
+    let d = b - a;
+    while(d >  Math.PI) d -= 2 * Math.PI;
+    while(d < -Math.PI) d += 2 * Math.PI;
+    return a + d * t;
+  }
+
+  // Find the ghost's current pose by interpolating between its samples.
+  // Returns null once playback is past the ghost's final frame (ghost "finishes").
+  function getGhostPose(ghost, t){
+    const frames = ghost.frames;
+    if(!frames || frames.length === 0) return null;
+    if(t <= frames[0].t) return { x:frames[0].x, y:frames[0].y, angle:frames[0].a };
+    if(t >= frames[frames.length - 1].t) return null;
+    // Monotonic pointer — advance until the next frame is past t.
+    while(playbackGhostIdx < frames.length - 2 && frames[playbackGhostIdx + 1].t < t){
+      playbackGhostIdx++;
+    }
+    const a = frames[playbackGhostIdx];
+    const b = frames[playbackGhostIdx + 1];
+    if(!b) return { x:a.x, y:a.y, angle:a.a };
+    const u = (t - a.t) / (b.t - a.t);
+    return {
+      x: a.x + (b.x - a.x) * u,
+      y: a.y + (b.y - a.y) * u,
+      angle: lerpAngle(a.a, b.a, u)
+    };
+  }
+
   function render(nowSec){
     let shakeX = 0, shakeY = 0;
     if(shakeAmount > 0.1){
@@ -3432,6 +3524,25 @@ const Game = (function(){
       for(let i = 0; i < parkedCars.length; i++) Car.draw(ctx, parkedCars[i]);
       for(let i = 0; i < trafficCars.length; i++) Car.draw(ctx, trafficCars[i]);
       Renderer.drawDust(ctx, dust, nowSec);
+
+      // Ghost replay — translucent pink copy of your best run.
+      // Draw before the real player so the player always sits on top.
+      if(state === 'play' && playbackGhost){
+        const pose = getGhostPose(playbackGhost, timer);
+        if(pose){
+          ctx.save();
+          ctx.globalAlpha = 0.32;
+          Car.draw(ctx, {
+            x: pose.x, y: pose.y, angle: pose.angle,
+            length: 42, width: 22,
+            color: '#f28cc7',
+            steering: 0, hitFlash: 0,
+            braking: false, reversing: false
+          });
+          ctx.restore();
+        }
+      }
+
       if(player){
         Renderer.drawPlayerHalo(ctx, player, nowSec);
         Car.draw(ctx, player);
