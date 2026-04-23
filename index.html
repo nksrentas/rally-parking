@@ -318,6 +318,38 @@ html,body{
   margin:0 auto;
   width:100%;
 }
+.panel-label-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.diff-toggle{
+  display:inline-flex;
+  border:1.5px solid var(--ink);
+  background:var(--bg);
+  border-radius:0;
+  overflow:hidden;
+}
+.diff-opt{
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:0.24em;
+  text-transform:uppercase;
+  color:var(--ink);
+  background:transparent;
+  border:none;
+  padding:7px 16px;
+  cursor:pointer;
+  font-weight:600;
+  transition: all 0.15s ease;
+}
+.diff-opt + .diff-opt{ border-left:1.5px solid var(--ink) }
+.diff-opt:hover{ background:var(--bg-2) }
+.diff-opt.active{
+  background:var(--ink);
+  color:var(--bg);
+}
 
 /* Level grid — race-entry rows */
 .level-grid{
@@ -1266,6 +1298,8 @@ html,body{
   .circuit-row{ grid-template-columns: 54px 1fr; padding:14px 14px 10px; gap:12px }
   .circuit-name{ font-size:22px }
   .circuit-blurb{ font-size:9px; letter-spacing:0.08em }
+  .panel-label-row{ flex-wrap:wrap; gap:10px }
+  .diff-opt{ padding:6px 12px; font-size:9px; letter-spacing:0.2em }
   .level-card .desc{ font-size:10px; letter-spacing:0.04em }
   .level-card .meta{ font-size:12px; min-width:52px }
   .level-card .lock{ padding:4px 10px; font-size:8px; letter-spacing:0.22em; min-width:62px }
@@ -1365,11 +1399,7 @@ html,body{
         </div>
         <div class="panel">
           <div class="lbl">Damage</div>
-          <div class="damage-row" id="hud-damage">
-            <div class="damage-seg"></div>
-            <div class="damage-seg"></div>
-            <div class="damage-seg"></div>
-          </div>
+          <div class="damage-row" id="hud-damage"></div>
         </div>
       </div>
       <div class="row bot-r">
@@ -1416,7 +1446,13 @@ html,body{
           </div>
         </div>
       </div>
-      <div class="panel-label">Pick a stage</div>
+      <div class="panel-label panel-label-row">
+        <span>Pick a stage</span>
+        <div class="diff-toggle" role="group" aria-label="Difficulty">
+          <button class="diff-opt" id="diff-normal" data-diff="normal">Normal</button>
+          <button class="diff-opt" id="diff-hard" data-diff="hard">Hard</button>
+        </div>
+      </div>
       <div class="level-grid" id="level-grid"></div>
       <div class="start-footer">
         <div class="start-actions">
@@ -1515,7 +1551,14 @@ html,body{
    ============================================================ */
 const Storage = (function(){
   const KEY = 'parking.zen.save.v1';
-  const defaults = { unlocked: 1, levels: {}, muted: false, playerName: '' };
+  const defaults = {
+    unlocked: 1,
+    levels: {},       // Normal-mode records (unchanged for back-compat)
+    levelsHard: {},   // Hard-mode records (separate ghosts, bestTimes, stars)
+    difficulty: 'normal',
+    muted: false,
+    playerName: ''
+  };
   let state = null;
   function load(){
     try {
@@ -1523,6 +1566,8 @@ const Storage = (function(){
       state = raw ? Object.assign({}, defaults, JSON.parse(raw)) : Object.assign({}, defaults);
     } catch(e){ state = Object.assign({}, defaults); }
     if(!state.levels) state.levels = {};
+    if(!state.levelsHard) state.levelsHard = {};
+    if(state.difficulty !== 'hard') state.difficulty = 'normal';
     if(state.playerName == null) state.playerName = '';
     return state;
   }
@@ -1536,12 +1581,18 @@ const Storage = (function(){
     save();
   }
   function resetProgress(){
-    state = Object.assign({}, defaults, { levels:{} });
+    state = Object.assign({}, defaults, { levels:{}, levelsHard:{} });
     save();
   }
+  // Route a level record lookup/write to the right dict based on current difficulty.
+  // Normal mode -> s.levels, Hard mode -> s.levelsHard. Unlock progression is shared
+  // across difficulties (clearing L3 on Hard unlocks L4 for both modes).
+  function dictFor(s){ return s.difficulty === 'hard' ? s.levelsHard : s.levels; }
+
   function recordWin(id, time, damage, ghostFrames){
     const s = get();
-    const prev = s.levels[id] || { bestTime:null, bestStars:0, completions:0, cleanRuns:0, topRuns:[], ghost:null };
+    const dict = dictFor(s);
+    const prev = dict[id] || { bestTime:null, bestStars:0, completions:0, cleanRuns:0, topRuns:[], ghost:null };
     const stars = computeStars(id, time, damage);
     const newBest = prev.bestTime == null ? time : Math.min(prev.bestTime, time);
     const newStars = Math.max(prev.bestStars || 0, stars);
@@ -1558,7 +1609,7 @@ const Storage = (function(){
     if(isNewBest && ghostFrames && ghostFrames.length >= 2){
       ghost = { time: time, frames: ghostFrames };
     }
-    s.levels[id] = {
+    dict[id] = {
       bestTime: newBest, bestStars: newStars,
       completions: completions, cleanRuns: cleanRuns,
       topRuns: topRuns, ghost: ghost
@@ -1572,6 +1623,7 @@ const Storage = (function(){
       save();
     } catch(e) {
       for(const lid in s.levels){ if(s.levels[lid].ghost) s.levels[lid].ghost = null; }
+      for(const lid in s.levelsHard){ if(s.levelsHard[lid].ghost) s.levelsHard[lid].ghost = null; }
       try { save(); } catch(e2) {}
     }
     return {
@@ -1582,8 +1634,16 @@ const Storage = (function(){
     };
   }
   function setMuted(m){ const s = get(); s.muted = !!m; save(); }
-  function reset(){ state = Object.assign({}, defaults, { levels:{} }); save(); }
-  return { load, get, recordWin, setMuted, reset, setPlayerName, resetProgress };
+  function setDifficulty(d){
+    const s = get();
+    s.difficulty = (d === 'hard') ? 'hard' : 'normal';
+    save();
+  }
+  // Return the active-difficulty record dict, so callers that don't want to
+  // branch on s.difficulty themselves can just ask once.
+  function activeLevels(){ return dictFor(get()); }
+  function reset(){ state = Object.assign({}, defaults, { levels:{}, levelsHard:{} }); save(); }
+  return { load, get, recordWin, setMuted, reset, setPlayerName, resetProgress, setDifficulty, activeLevels };
 })();
 
 /* ============================================================
@@ -3011,9 +3071,10 @@ const UI = (function(){
   function updateMastCount(save){
     const mast = document.getElementById('mast-count');
     if(!mast) return;
+    const dict = save.difficulty === 'hard' ? save.levelsHard : save.levels;
     let cleared = 0;
     for(let i = 0; i < LEVELS.length; i++){
-      const r = save.levels[LEVELS[i].id];
+      const r = (dict || {})[LEVELS[i].id];
       if(r && (r.bestStars || 0) >= 1) cleared++;
     }
     clear(mast);
@@ -3025,7 +3086,10 @@ const UI = (function(){
   function appendLevelCard(lv, save, onSelect){
     const idx = LEVELS.indexOf(lv);
     const locked = (idx + 1) > save.unlocked;
-    const rec = save.levels[lv.id] || {};
+    // Stars and best time shown on the card reflect the currently selected
+    // difficulty's record dict, so switching Normal <-> Hard updates the UI.
+    const dict = save.difficulty === 'hard' ? save.levelsHard : save.levels;
+    const rec = (dict || {})[lv.id] || {};
     const btn = document.createElement('button');
     btn.className = 'level-card' + (locked ? ' locked' : '');
     btn.disabled = locked;
@@ -3059,6 +3123,7 @@ const UI = (function(){
 
   function showStart(onSelect){
     hide(el.winScreen); hide(el.failScreen); hide(el.hud);
+    syncDifficultyToggle();
     renderLevelGrid(onSelect);
     show(el.startScreen);
   }
@@ -3106,8 +3171,19 @@ const UI = (function(){
     el.hudTime.textContent = fmtTime(time);
     el.hudAlign.style.width = Math.floor(align * 100) + '%';
     const segs = el.hudDamage.querySelectorAll('.damage-seg');
+    const total = segs.length || 3;
     for(let i = 0; i < segs.length; i++){
-      segs[i].classList.toggle('lost', i >= (3 - damage));
+      // Segments represent remaining HP, drained from the right as you take hits.
+      segs[i].classList.toggle('lost', i >= (total - damage));
+    }
+  }
+
+  // Called from Game.loadLevel. Ensures the HUD damage row has exactly
+  // `hpMax` segments, rebuilding once instead of reshaping per frame.
+  function rebuildDamageSegments(hpMax){
+    while(el.hudDamage.firstChild) el.hudDamage.removeChild(el.hudDamage.firstChild);
+    for(let i = 0; i < hpMax; i++){
+      el.hudDamage.appendChild(makeEl('div', 'damage-seg', ''));
     }
   }
 
@@ -3403,6 +3479,23 @@ const UI = (function(){
     el.nameInput.addEventListener('blur', function(){
       handlers.nameChange(el.nameInput.value);
     });
+    // Difficulty toggle. Clicking an option stores the choice and re-renders
+    // so stars/time on cards reflect the new difficulty's records.
+    const diffButtons = document.querySelectorAll('.diff-opt');
+    diffButtons.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        handlers.difficultyChange(btn.getAttribute('data-diff'));
+      });
+    });
+  }
+
+  // Update the Normal/Hard pill row to reflect whatever's in Storage.
+  function syncDifficultyToggle(){
+    const d = Storage.get().difficulty;
+    const btns = document.querySelectorAll('.diff-opt');
+    btns.forEach(function(btn){
+      btn.classList.toggle('active', btn.getAttribute('data-diff') === d);
+    });
   }
 
   // Valet Rush progress indicator. idx=-1 hides the panel (non-valet levels).
@@ -3425,7 +3518,7 @@ const UI = (function(){
   }
 
   return {
-    showStart, startPlay, showWin, showFail, updateHUD, setMuted, setValetProgress,
+    showStart, startPlay, showWin, showFail, updateHUD, setMuted, setValetProgress, rebuildDamageSegments, syncDifficultyToggle,
     showTip, flash, bind, showLeaderboard, hideLeaderboard, renderLeaderboard
   };
 })();
@@ -3475,6 +3568,11 @@ const Game = (function(){
   let restCounter = 0;
   let winLatch = false;
   let currentCheckpointIdx = -1; // -1 = not a valet level; 0+ = active checkpoint index
+  // Difficulty-tuned knobs. Re-read on every loadLevel from Storage.
+  // Normal: forgiving (3 hits, 15px alignment tolerance).
+  // Hard:   tight (2 hits, 11px alignment tolerance).
+  let damageMax = 3;
+  let posOkDist = 15;
   let shakeAmount = 0;
   let cameraX = 0, cameraY = 0;
   let dpr = 1;
@@ -3534,6 +3632,12 @@ const Game = (function(){
         // doesn't jump back to the end on each keystroke.
         Storage.setPlayerName(name);
         UI.renderLeaderboard();
+      },
+      difficultyChange: function(d){
+        Storage.setDifficulty(d);
+        UI.syncDifficultyToggle();
+        // Re-render the menu so cards show the new difficulty's records.
+        if(state === 'menu') gotoMenu();
       }
     });
 
@@ -3565,6 +3669,17 @@ const Game = (function(){
     if(level.weather === 'rain'){
       player.grip = 0.72;
     }
+    // Apply difficulty-tuned knobs. Read from storage every loadLevel so toggling
+    // difficulty on the start screen takes effect on the next play.
+    const saveForDiff = Storage.get();
+    if(saveForDiff.difficulty === 'hard'){
+      damageMax = 2;
+      posOkDist = 11;
+    } else {
+      damageMax = 3;
+      posOkDist = 15;
+    }
+    UI.rebuildDamageSegments(damageMax);
     parkedCars = (level.parkedCars || []).map(function(c){
       return Car.make({ x:c.x, y:c.y, angle:c.angle, color:c.color });
     });
@@ -3602,7 +3717,10 @@ const Game = (function(){
     recordingGhost = [];
     lastGhostSampleT = 0;
     playbackGhostIdx = 0;
-    const savedRec = (Storage.get().levels || {})[level.id];
+    // Ghost playback reads from the active-difficulty record dict so Normal
+    // ghosts don't appear on Hard runs (and vice versa) \u2014 each difficulty has
+    // its own independent best run.
+    const savedRec = (Storage.activeLevels() || {})[level.id];
     playbackGhost = (savedRec && savedRec.ghost && savedRec.ghost.frames && savedRec.ghost.frames.length >= 2)
       ? savedRec.ghost
       : null;
@@ -3842,7 +3960,7 @@ const Game = (function(){
         spawnDust(player);
         UI.flash();
         player.hitFlash = 1;
-        if(damage >= 3) lose();
+        if(damage >= damageMax) lose();
       } else if(impactHigh && hitCooldown === 0){
         damage += 1;
         hitCooldown = 0.55;
@@ -3850,7 +3968,7 @@ const Game = (function(){
         shakeAmount = Math.min(1, maxImpact / 140) * 8 + 4;
         player.hitFlash = 1;
         UI.flash();
-        if(damage >= 3) lose();
+        if(damage >= damageMax) lose();
       } else {
         player.hitFlash = Math.max(player.hitFlash, 0.4);
       }
@@ -3917,7 +4035,7 @@ const Game = (function(){
     while(da > Math.PI) da -= 2*Math.PI;
     while(da < -Math.PI) da += 2*Math.PI;
     const angleAbs = Math.abs(da);
-    const posOk = dist <= 15;
+    const posOk = dist <= posOkDist;
     const angleOk = angleAbs <= (10 * Math.PI / 180);
     const posScore = Math.max(0, 1 - dist / 80);
     const angleScore = Math.max(0, 1 - angleAbs / (40 * Math.PI / 180));
