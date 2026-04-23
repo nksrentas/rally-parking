@@ -118,6 +118,27 @@ html,body{
   line-height:1;
 }
 
+.valet-panel.hidden{ display:none }
+.valet-dots{
+  display:flex; gap:6px; align-items:center; padding:6px 0 2px;
+}
+.valet-dot{
+  width:10px; height:10px;
+  background:transparent;
+  border:1.5px solid rgba(244,234,216,0.4);
+  transform:rotate(45deg);
+  transition: all 0.25s var(--ease-out);
+}
+.valet-dot.done{
+  background:#59c98b;
+  border-color:#59c98b;
+}
+.valet-dot.active{
+  background:var(--pink);
+  border-color:var(--pink);
+  box-shadow: 0 0 0 2px rgba(242, 140, 199, 0.25);
+}
+
 .damage-row{ display:flex; gap:7px; align-items:center; padding:3px 0 2px }
 .damage-seg{
   width:12px; height:12px;
@@ -382,18 +403,21 @@ html,body{
   text-align:right;
 }
 .level-card .lock{
-  position:absolute;
-  top:50%;
-  right:32px;
-  transform:translateY(-50%);
+  grid-column: 3 / span 2;
+  justify-self:end;
   font-family:var(--font-mono);
-  font-size:9px;
-  letter-spacing:0.3em;
+  font-size:10px;
+  letter-spacing:0.28em;
   color:var(--pink-ink);
   font-weight:600;
+  text-transform:uppercase;
+  padding:6px 14px;
+  border:1.5px solid var(--pink-ink);
+  background:transparent;
+  min-width:80px;
+  text-align:center;
   pointer-events:none;
 }
-.level-card.locked .meta{ display:none }
 
 /* Start footer */
 .start-footer{
@@ -732,7 +756,7 @@ html,body{
 }
 .lb-progress-row{
   display:grid;
-  grid-template-columns:repeat(5, 1fr);
+  grid-template-columns:repeat(auto-fit, minmax(96px, 1fr));
   gap:8px;
 }
 .lb-mini{
@@ -1138,6 +1162,7 @@ html,body{
   .level-card .nm{ font-size:22px }
   .level-card .stars{ grid-column: 2 }
   .level-card .meta{ grid-column: 3; grid-row: 1 / span 2; min-width:60px; font-size:14px }
+  .level-card .lock{ grid-column: 3; padding:5px 12px; font-size:9px }
   .panel-label{ padding:20px 20px 10px }
   .start-footer{ padding:0 20px 40px }
   .result-box{ padding:40px 24px 28px }
@@ -1153,8 +1178,18 @@ html,body{
   .lb-filters{ padding:14px 24px 12px }
   .lb-stage-info{ padding:18px 24px 8px }
   .lb-stage-title{ font-size:30px }
-  .lb-podium{ padding:14px 24px 18px; grid-template-columns:1fr; gap:12px }
-  .pod.p1{ order:-1 }
+  /* Podium: P1 on its own row full-width, P2 + P3 side-by-side below.
+     Better than a boring single-column stack because it preserves the
+     "winner is the biggest" hierarchy while using all the width. */
+  .lb-podium{
+    padding:14px 24px 18px;
+    grid-template-columns:1fr 1fr;
+    grid-template-areas: "p1 p1" "p2 p3";
+    gap:10px;
+  }
+  .pod.p1{ grid-area:p1 }
+  .pod.p2{ grid-area:p2 }
+  .pod.p3{ grid-area:p3 }
   .lb-board-head{ padding:10px 24px; grid-template-columns: 44px 32px 1fr 80px 70px; gap:10px }
   .lb-table-row{ padding:10px 24px; grid-template-columns: 44px 32px 1fr 80px 70px; gap:10px }
   .lb-table-row.you{ padding-left:18px }
@@ -1172,9 +1207,87 @@ html,body{
   .lb-title{ font-size:42px }
 }
 
-@media (max-width: 440px){
+/* Very narrow (phones in portrait below ~480px). Tighten everything:
+   smaller HUD, smaller touch controls, drop the avatar column on the
+   leaderboard table (name+flag is enough ID there), single-column
+   podium to avoid squishing P2/P3. */
+@media (max-width: 480px){
   .keys{ display:none }
   .mast-right{ display:none }
+  .brand-box{ padding:32px 16px 24px }
+  .panel-label{ padding:16px 16px 8px }
+  .level-grid{ margin-bottom:20px }
+  .level-card{ padding:14px 14px; gap:12px; grid-template-columns: 54px 1fr auto }
+  .level-card .n{ font-size:38px }
+  .level-card .nm{ font-size:18px }
+  .level-card .desc{ font-size:10px; letter-spacing:0.04em }
+  .level-card .meta{ font-size:12px; min-width:52px }
+  .level-card .lock{ padding:4px 10px; font-size:8px; letter-spacing:0.22em; min-width:62px }
+  .start-footer{ padding:0 16px 28px }
+  .result-box{ padding:32px 18px 22px; box-shadow: 0 14px 32px rgba(26,20,16,0.3), 4px 4px 0 var(--ink) }
+  .result-plate{ padding:5px 12px; font-size:10px }
+  .result-title{ font-size:clamp(56px, 16vw, 72px) }
+  .result-stats{ margin:20px -18px 0 }
+  .stat{ padding:14px 4px }
+  .stat .l{ font-size:8px; letter-spacing:0.2em }
+  .stat .v{ font-size:22px }
+  .unlock-banner{ margin:0 -18px; padding:12px 16px }
+  .unlock-banner .nm{ font-size:15px }
+  .actions{ margin-top:22px }
+  .actions .btn{ padding:10px 14px; font-size:10px; letter-spacing:0.18em }
+  .lb-hero{ padding:26px 18px 16px }
+  .lb-plate{ font-size:9px; letter-spacing:0.22em; padding:5px 10px }
+  .lb-title{ font-size:34px }
+  .name-row{ padding:14px 18px 18px; gap:10px }
+  .name-lbl{ font-size:8px; letter-spacing:0.22em }
+  .name-input{ font-size:18px }
+  .lb-progress{ padding:14px 18px 16px }
+  .lb-progress-row{ grid-template-columns:repeat(auto-fit, minmax(78px, 1fr)); gap:5px }
+  .lb-mini{ padding:7px 5px 6px }
+  .lb-mini .m-t{ font-size:10px }
+  .lb-filters{ padding:12px 18px 10px; gap:8px }
+  .lb-chip{ padding:6px 10px; font-size:9px; letter-spacing:0.16em }
+  .lb-stage-info{ padding:14px 18px 6px }
+  .lb-stage-title{ font-size:24px }
+  .lb-stage-meta{ font-size:9px; letter-spacing:0.14em }
+  .lb-podium{
+    padding:12px 18px 14px;
+    grid-template-columns:1fr;
+    grid-template-areas: "p1" "p2" "p3";
+    gap:8px;
+  }
+  .pod{ padding:14px 12px 12px }
+  .pod.p1{ padding:16px 12px 16px }
+  .pod .p-name{ font-size:18px }
+  .pod .p-avatar{ width:46px; height:46px; font-size:18px }
+  .pod .p-time{ font-size:18px }
+  /* Leaderboard table — drop the avatar column (column 2) at this size.
+     The flag + name is enough identity without the skew-avatar box. */
+  .lb-board-head{ padding:8px 18px; grid-template-columns: 42px 1fr 74px 64px; gap:8px }
+  .lb-board-head > div:nth-child(2){ display:none }
+  .lb-table-row{ padding:9px 18px; grid-template-columns: 42px 1fr 74px 64px; gap:8px }
+  .lb-table-row .av{ display:none }
+  .lb-table-row.you{ padding-left:14px }
+  .lb-note{ padding:10px 18px; font-size:9px }
+  .lb-footer{ padding:16px 18px 20px }
+  /* HUD — smaller panels, tighter spacing so driving area stays clear */
+  #hud .top-l, #hud .top-r{ gap:6px }
+  #hud .bot-r{ bottom:12px; right:12px; gap:4px }
+  .panel{ padding:6px 9px; gap:2px }
+  .panel .lbl{ font-size:8px; letter-spacing:0.18em }
+  .panel .val{ font-size:12px }
+  #hud .top-l .panel:first-child .val{ font-size:18px }
+  .align-box{ min-width:100px }
+  .damage-seg{ width:9px; height:9px }
+  .btn-icon{ width:32px; height:32px; font-size:12px }
+  /* Touch controls — scale down so both pads fit comfortably on a
+     narrow phone without overlapping. */
+  .steer-wrap{ width:116px; height:116px; bottom:18px }
+  .steer-hub{ width:24px; height:24px }
+  .pedals{ bottom:18px; gap:5px }
+  .pedal{ width:86px; height:48px; font-size:10px; letter-spacing:0.18em }
+  .hb-wrap{ bottom:18px }
+  .hb{ width:60px; height:40px; font-size:8px; letter-spacing:0.16em }
 }
 </style>
 </head>
@@ -1192,6 +1305,11 @@ html,body{
         <div class="panel">
           <div class="lbl">Time</div>
           <div class="val" id="hud-time">0:00</div>
+        </div>
+        <div class="panel valet-panel hidden" id="hud-valet">
+          <div class="lbl">Drop</div>
+          <div class="val" id="hud-valet-count">1/3</div>
+          <div class="valet-dots" id="hud-valet-dots"></div>
         </div>
       </div>
       <div class="row top-r">
@@ -1241,7 +1359,7 @@ html,body{
             <div class="tag-row">
               <span class="plate">Rally Plate</span>
               <span>&middot; Est. 2026</span>
-              <span>&middot; 8 Stages</span>
+              <span>&middot; 10 Stages</span>
             </div>
             <h1 class="brand">Parking <span class="zen">Zen</span></h1>
             <p class="tagline">Nail the spot. No rush.</p>
@@ -2294,6 +2412,103 @@ const LEVELS = [
     traffic: [],
     player: { x: 640, y: 620, angle: -Math.PI/2 },
     target: { x: 640, y: 200, angle: -Math.PI/2 }
+  },
+
+  // -------- Level 9: Roundabout (central island, navigate around) --------
+  {
+    id: 9,
+    name: 'Roundabout',
+    desc: 'Circular island \u00b7 Route around traffic',
+    tip: 'Pick a lane and commit. Don\u2019t clip the island.',
+    targetTime: 32,
+    world: { w: 1280, h: 720 },
+    grass: [{ x:0, y:0, w:1280, h:60 }, { x:0, y:660, w:1280, h:60 }],
+    markings: { centerDashed: null, laneEdges: [] },
+    walls: [
+      // Outer bounds
+      { x: 0, y: 0, w: 1280, h: 20 },
+      { x: 0, y: 700, w: 1280, h: 20 },
+      { x: 0, y: 0, w: 20, h: 720 },
+      { x: 1260, y: 0, w: 20, h: 720 },
+      // Central island \u2014 octagonal approximation (core + cap + cap)
+      { x: 540, y: 310, w: 200, h: 120 },
+      { x: 580, y: 280, w: 120, h: 30 },
+      { x: 580, y: 430, w: 120, h: 30 }
+    ],
+    parkingSpots: [
+      // Top parking row
+      { x: 220, y: 130, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 320, y: 130, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 420, y: 130, w: 56, h: 96, angle: -Math.PI/2 },
+      // Bottom parking row (target on right)
+      { x: 860,  y: 590, w: 56, h: 96, angle: Math.PI/2 },
+      { x: 960,  y: 590, w: 56, h: 96, angle: Math.PI/2 },
+      { x: 1060, y: 590, w: 60, h: 96, angle: Math.PI/2, target: true }
+    ],
+    parkedCars: [
+      { x: 220, y: 130, angle: -Math.PI/2, color: '#4a90e2' },
+      { x: 420, y: 130, angle: -Math.PI/2, color: '#ff8c42' },
+      { x: 860, y: 590, angle: Math.PI/2, color: '#2f9f6c' },
+      { x: 960, y: 590, angle: Math.PI/2, color: '#a058e0' }
+    ],
+    traffic: [
+      { x: 1100, y: 200, angle: Math.PI, speed: 50, path: 'horizontal-top', lane: 'top', color: '#d83a58' },
+      { x: 180,  y: 530, angle: 0,       speed: 55, path: 'horizontal-bot', lane: 'bot', color: '#e8e3d5' }
+    ],
+    player: { x: 100, y: 590, angle: 0 },
+    target: { x: 1060, y: 590, angle: Math.PI/2 }
+  },
+
+  // -------- Level 10: Valet Rush (multi-checkpoint circuit) --------
+  {
+    id: 10,
+    name: 'Valet Rush',
+    desc: 'Multi-drop circuit \u00b7 Park 3 cars in sequence',
+    tip: 'Hit each green marker in order. Timer never stops.',
+    targetTime: 55,
+    world: { w: 1280, h: 720 },
+    grass: [{ x:0, y:0, w:1280, h:60 }, { x:0, y:660, w:1280, h:60 }],
+    markings: { centerDashed: null, laneEdges: [] },
+    walls: [
+      // Outer bounds
+      { x: 0, y: 0, w: 1280, h: 20 },
+      { x: 0, y: 700, w: 1280, h: 20 },
+      { x: 0, y: 0, w: 20, h: 720 },
+      { x: 1260, y: 0, w: 20, h: 720 },
+      // Zoning walls \u2014 carve the lot into three bays
+      { x: 360, y: 320, w: 24, h: 220 },
+      { x: 900, y: 180, w: 24, h: 220 }
+    ],
+    checkpoints: [
+      { x: 200,  y: 180, angle: -Math.PI/2 },
+      { x: 1080, y: 540, angle:  Math.PI/2 },
+      { x: 640,  y: 560, angle: -Math.PI/2 }
+    ],
+    parkingSpots: [
+      // Checkpoint 0 \u2014 top-left bay
+      { x: 120, y: 180, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 200, y: 180, w: 60, h: 96, angle: -Math.PI/2, checkpoint: 0 },
+      { x: 280, y: 180, w: 56, h: 96, angle: -Math.PI/2 },
+      // Checkpoint 1 \u2014 bottom-right bay
+      { x: 1000, y: 540, w: 56, h: 96, angle: Math.PI/2 },
+      { x: 1080, y: 540, w: 60, h: 96, angle: Math.PI/2, checkpoint: 1 },
+      { x: 1160, y: 540, w: 56, h: 96, angle: Math.PI/2 },
+      // Checkpoint 2 \u2014 center-bottom bay
+      { x: 560, y: 560, w: 56, h: 96, angle: -Math.PI/2 },
+      { x: 640, y: 560, w: 60, h: 96, angle: -Math.PI/2, checkpoint: 2 },
+      { x: 720, y: 560, w: 56, h: 96, angle: -Math.PI/2 }
+    ],
+    parkedCars: [
+      { x: 120,  y: 180, angle: -Math.PI/2, color: '#4a90e2' },
+      { x: 280,  y: 180, angle: -Math.PI/2, color: '#ff8c42' },
+      { x: 1000, y: 540, angle: Math.PI/2,  color: '#2f9f6c' },
+      { x: 1160, y: 540, angle: Math.PI/2,  color: '#a058e0' },
+      { x: 560,  y: 560, angle: -Math.PI/2, color: '#d83a58' },
+      { x: 720,  y: 560, angle: -Math.PI/2, color: '#e8e3d5' }
+    ],
+    traffic: [],
+    player: { x: 640, y: 360, angle: 0 },
+    target: { x: 200, y: 180, angle: -Math.PI/2 }
   }
 ];
 
@@ -2572,6 +2787,9 @@ const UI = (function(){
     hudTime:     document.getElementById('hud-time'),
     hudAlign:    document.getElementById('hud-align'),
     hudDamage:   document.getElementById('hud-damage'),
+    hudValet:      document.getElementById('hud-valet'),
+    hudValetCount: document.getElementById('hud-valet-count'),
+    hudValetDots:  document.getElementById('hud-valet-dots'),
     hudReset:    document.getElementById('hud-reset'),
     hudMenu:     document.getElementById('hud-menu'),
     hudMute:     document.getElementById('hud-mute'),
@@ -2630,15 +2848,20 @@ const UI = (function(){
       if(descText) body.appendChild(makeEl('div', 'desc', descText));
       btn.appendChild(body);
 
-      const stars = rec.bestStars || 0;
-      const starsRow = makeEl('div', 'stars');
-      for(let i = 0; i < 3; i++){
-        starsRow.appendChild(makeEl('span', 'star' + (stars > i ? ' on' : ''), '\u2605'));
+      // Locked cards skip stars + meta and show a single "Locked" cell instead.
+      // Showing empty outlined stars for levels you haven't played is noise, and
+      // the absolute-positioned pill used to collide with the stars column.
+      if(locked){
+        btn.appendChild(makeEl('div', 'lock', 'Locked'));
+      } else {
+        const stars = rec.bestStars || 0;
+        const starsRow = makeEl('div', 'stars');
+        for(let i = 0; i < 3; i++){
+          starsRow.appendChild(makeEl('span', 'star' + (stars > i ? ' on' : ''), '\u2605'));
+        }
+        btn.appendChild(starsRow);
+        btn.appendChild(makeEl('div', 'meta', rec.bestTime != null ? fmtTime(rec.bestTime) : '\u2014'));
       }
-      btn.appendChild(starsRow);
-
-      btn.appendChild(makeEl('div', 'meta', rec.bestTime != null ? fmtTime(rec.bestTime) : '\u2014'));
-      if(locked) btn.appendChild(makeEl('div', 'lock', 'Locked'));
 
       btn.addEventListener('click', function(){ if(!locked) onSelect(lv.id); });
       el.levelGrid.appendChild(btn);
@@ -2791,8 +3014,8 @@ const UI = (function(){
     { id:'g30', name:'Kai Nakamura',    flag:'\uD83C\uDDEF\uD83C\uDDF5', initials:'KN', country:'Fukuoka' }
   ];
   // Per-stage base (fastest) + spread (slowest-fastest). Tuned against level target times.
-  const LB_BASES   = { 1: 10.12, 2: 20.14, 3: 32.45, 4: 44.12, 5: 41.12, 6: 31.22, 7: 14.88, 8: 23.45 };
-  const LB_SPREADS = { 1:  7.33, 2: 12.44, 3: 22.67, 4: 24.80, 5: 21.36, 6: 18.55, 7: 11.22, 8: 14.80 };
+  const LB_BASES   = { 1: 10.12, 2: 20.14, 3: 32.45, 4: 44.12, 5: 41.12, 6: 31.22, 7: 14.88, 8: 23.45, 9: 28.90, 10: 48.65 };
+  const LB_SPREADS = { 1:  7.33, 2: 12.44, 3: 22.67, 4: 24.80, 5: 21.36, 6: 18.55, 7: 11.22, 8: 14.80, 9: 19.40, 10: 26.15 };
   const LB_FAKE_TOTAL = 12489; // Visual "global drivers" count
 
   function lbGhostTime(stageId, idx){
@@ -3007,8 +3230,27 @@ const UI = (function(){
     });
   }
 
+  // Valet Rush progress indicator. idx=-1 hides the panel (non-valet levels).
+  // idx=N shows the panel with diamond dots: done < current=active, done = filled green,
+  // pending = outline. Count reads "<current+1>/<total>".
+  function setValetProgress(currentIdx, total){
+    if(currentIdx < 0 || !total){
+      el.hudValet.classList.add('hidden');
+      return;
+    }
+    el.hudValet.classList.remove('hidden');
+    el.hudValetCount.textContent = (currentIdx + 1) + '/' + total;
+    // Rebuild the dot row; small N so this is cheap.
+    while(el.hudValetDots.firstChild) el.hudValetDots.removeChild(el.hudValetDots.firstChild);
+    for(let i = 0; i < total; i++){
+      const dot = document.createElement('div');
+      dot.className = 'valet-dot' + (i < currentIdx ? ' done' : (i === currentIdx ? ' active' : ''));
+      el.hudValetDots.appendChild(dot);
+    }
+  }
+
   return {
-    showStart, startPlay, showWin, showFail, updateHUD, setMuted,
+    showStart, startPlay, showWin, showFail, updateHUD, setMuted, setValetProgress,
     showTip, flash, bind, showLeaderboard, hideLeaderboard, renderLeaderboard
   };
 })();
@@ -3057,6 +3299,7 @@ const Game = (function(){
   let alignNow = 0;
   let restCounter = 0;
   let winLatch = false;
+  let currentCheckpointIdx = -1; // -1 = not a valet level; 0+ = active checkpoint index
   let shakeAmount = 0;
   let cameraX = 0, cameraY = 0;
   let dpr = 1;
@@ -3164,6 +3407,17 @@ const Game = (function(){
     winLatch = false;
     shakeAmount = 0;
     cameraX = 0; cameraY = 0;
+
+    // Valet Rush: start at checkpoint 0 and sync the active target to it.
+    if(Array.isArray(level.checkpoints) && level.checkpoints.length > 0){
+      currentCheckpointIdx = 0;
+      const cp0 = level.checkpoints[0];
+      level.target = { x: cp0.x, y: cp0.y, angle: cp0.angle };
+      UI.setValetProgress(0, level.checkpoints.length);
+    } else {
+      currentCheckpointIdx = -1;
+      UI.setValetProgress(-1, 0);
+    }
 
     // Ghost state reset
     recordingGhost = [];
@@ -3442,6 +3696,39 @@ const Game = (function(){
     }
   }
 
+  // Render checkpoints already cleared as faded green pads with a checkmark.
+  // Skips the active one (drawn by drawTargetSpot) and any future ones.
+  function drawCompletedCheckpoints(c){
+    if(!level || !Array.isArray(level.checkpoints)) return;
+    for(let i = 0; i < currentCheckpointIdx; i++){
+      const cp = level.checkpoints[i];
+      const spot = (level.parkingSpots || []).find(function(s){ return s.checkpoint === i; });
+      if(!spot) continue;
+      c.save();
+      c.translate(cp.x, cp.y);
+      c.rotate(cp.angle);
+      c.fillStyle = 'rgba(89, 201, 139, 0.22)';
+      c.strokeStyle = 'rgba(89, 201, 139, 0.55)';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.rect(-spot.w/2, -spot.h/2, spot.w, spot.h);
+      c.fill();
+      c.stroke();
+      // Checkmark (drawn screen-upright, so undo the rotation for the glyph).
+      c.rotate(-cp.angle);
+      c.fillStyle = 'rgba(89, 201, 139, 0.95)';
+      c.strokeStyle = 'rgba(89, 201, 139, 0.95)';
+      c.lineWidth = 3;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(-8, 0);
+      c.lineTo(-2, 6);
+      c.lineTo(9, -6);
+      c.stroke();
+      c.restore();
+    }
+  }
+
   function computeAlignment(){
     const t = level.target;
     const dx = player.x - t.x;
@@ -3461,6 +3748,22 @@ const Game = (function(){
   }
 
   function win(){
+    // Valet Rush: each parked checkpoint is intermediate except the last.
+    // Advance the cursor, retarget, chime, keep the timer/engine running,
+    // and bail out of the terminal win flow.
+    if(currentCheckpointIdx >= 0 && Array.isArray(level.checkpoints)){
+      const total = level.checkpoints.length;
+      if(currentCheckpointIdx < total - 1){
+        currentCheckpointIdx += 1;
+        const cp = level.checkpoints[currentCheckpointIdx];
+        level.target = { x: cp.x, y: cp.y, angle: cp.angle };
+        restCounter = 0;
+        Audio.chime();
+        UI.setValetProgress(currentCheckpointIdx, total);
+        UI.showTip('\u2713 Drop ' + currentCheckpointIdx + ' done \u2014 next spot');
+        return;
+      }
+    }
     winLatch = true;
     state = 'win';
     Audio.stopEngine();
@@ -3555,7 +3858,12 @@ const Game = (function(){
     if(level){
       Renderer.drawEnvironment(ctx, level);
       Renderer.drawSkidTrails(ctx, splitTrails(skidTrailsRaw), nowSec);
-      const targetSpot = (level.parkingSpots || []).find(function(s){ return s.target; });
+      // Valet levels route by checkpoint index; all other levels use the flagged spot.
+      const isValet = currentCheckpointIdx >= 0 && Array.isArray(level.checkpoints);
+      const targetSpot = isValet
+        ? (level.parkingSpots || []).find(function(s){ return s.checkpoint === currentCheckpointIdx; })
+        : (level.parkingSpots || []).find(function(s){ return s.target; });
+      if(isValet) drawCompletedCheckpoints(ctx);
       if(targetSpot) Renderer.drawTargetSpot(ctx, level.target, targetSpot, nowSec);
       for(let i = 0; i < parkedCars.length; i++) Car.draw(ctx, parkedCars[i]);
       for(let i = 0; i < trafficCars.length; i++) Car.draw(ctx, trafficCars[i]);
