@@ -3,10 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Parking Zen</title>
+
+<!-- Primary SEO -->
+<title>Rally Parking &mdash; Top-down arcade parking game</title>
+<meta name="description" content="Rally Parking is a free top-down arcade parking game. 15 stages across 6 circuits, rain, night, ice, valet runs, rolling tires, pedestrians. Plays in any browser, no install.">
+<meta name="keywords" content="parking game, arcade parking, browser game, top-down driving, rally parking, html5 game, free parking game">
+<meta name="author" content="nksrentas">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://nksrentas.github.io/rally-parking/">
+<meta name="theme-color" content="#f28cc7">
+<meta name="color-scheme" content="light">
+
+<!-- Open Graph (Facebook / LinkedIn / iMessage / Slack / Discord) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Rally Parking">
+<meta property="og:title" content="Rally Parking &mdash; Top-down arcade parking game">
+<meta property="og:description" content="15 stages, 6 circuits, rain, night, ice, rolling tires, pedestrians, daily challenge. Plays in any browser.">
+<meta property="og:url" content="https://nksrentas.github.io/rally-parking/">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Rally Parking">
+<meta name="twitter:description" content="Free top-down arcade parking game. 15 stages, rain, night, ice, rolling tires, daily challenge.">
+
+<!-- Favicon: inline SVG data URI so there's no extra HTTP request.
+     A cream tile with a top-down pink car silhouette matching the in-game player. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23f4ead8'/%3E%3Crect x='9' y='5' width='14' height='22' rx='3' fill='%23f28cc7' stroke='%231a1410' stroke-width='1.5'/%3E%3Crect x='11' y='9' width='10' height='5' fill='%231a1410' opacity='0.82'/%3E%3Crect x='11' y='21' width='10' height='3' fill='%231a1410' opacity='0.5'/%3E%3Ccircle cx='11' cy='8' r='1.1' fill='%23f9e26f'/%3E%3Ccircle cx='21' cy='8' r='1.1' fill='%23f9e26f'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='26' fill='%23f4ead8'/%3E%3Crect x='50' y='28' width='80' height='124' rx='18' fill='%23f28cc7' stroke='%231a1410' stroke-width='8'/%3E%3Crect x='60' y='50' width='60' height='28' fill='%231a1410' opacity='0.82'/%3E%3Crect x='60' y='120' width='60' height='16' fill='%231a1410' opacity='0.5'/%3E%3Ccircle cx='60' cy='46' r='6' fill='%23f9e26f'/%3E%3Ccircle cx='120' cy='46' r='6' fill='%23f9e26f'/%3E%3C/svg%3E">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<!-- Structured data: VideoGame schema so search engines render a richer snippet
+     (name, description, genre, platform) and link previews carry more metadata. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Rally Parking",
+  "url": "https://nksrentas.github.io/rally-parking/",
+  "description": "Free top-down arcade parking game with 15 stages across 6 circuits. Features rain, night, ice, valet runs, rolling tires, pedestrians, daily challenge, and a coin-powered car skin shop. Plays in any modern browser.",
+  "genre": ["Arcade", "Driving", "Parking", "Casual"],
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Any (web browser)",
+  "browserRequirements": "Requires a modern HTML5 browser with Canvas and Web Audio support",
+  "gamePlatform": ["Web Browser"],
+  "playMode": "SinglePlayer",
+  "inLanguage": "en",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
+
 <style>
 /* =========================================================
    PARKING ZEN — Rally
