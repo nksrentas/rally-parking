@@ -324,6 +324,55 @@ html,body{
   justify-content:space-between;
   gap:16px;
 }
+
+/* Daily Challenge card: a single stage picked by today's date. Comes back
+   each day with a different level so players have a reason to show up. */
+.daily-card{
+  max-width:1180px;
+  margin:24px auto 8px;
+  padding:18px 32px;
+  background:var(--ink);
+  color:var(--bg);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  border:2px solid var(--ink);
+}
+.daily-card .daily-left{ min-width:0; flex:1 }
+.daily-kicker{
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:0.38em;
+  text-transform:uppercase;
+  color:var(--pink);
+  font-weight:600;
+}
+.daily-title{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-size:30px;
+  letter-spacing:0.01em;
+  color:var(--bg);
+  transform:skewX(var(--skew));
+  display:inline-block;
+  margin:8px 0 6px;
+  line-height:1;
+}
+.daily-title #daily-stage{ color:var(--pink) }
+.daily-meta{
+  font-family:var(--font-body);
+  font-size:11px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:rgba(244,234,216,0.72);
+  font-weight:500;
+}
+.daily-meta .daily-dot{ padding:0 6px; color:rgba(244,234,216,0.35) }
+.daily-meta .daily-done{ color:#59c98b }
+.btn.daily-play{
+  white-space:nowrap;
+}
 .diff-toggle{
   display:inline-flex;
   border:1.5px solid var(--ink);
@@ -1439,6 +1488,8 @@ html,body{
   .circuit-blurb{ font-size:9px; letter-spacing:0.08em }
   .panel-label-row{ flex-wrap:wrap; gap:10px }
   .diff-opt{ padding:6px 12px; font-size:9px; letter-spacing:0.2em }
+  .daily-card{ padding:14px 16px; flex-direction:column; align-items:flex-start; gap:14px }
+  .daily-title{ font-size:24px }
   .level-card .desc{ font-size:10px; letter-spacing:0.04em }
   .level-card .meta{ font-size:12px; min-width:52px }
   .level-card .lock{ padding:4px 10px; font-size:8px; letter-spacing:0.22em; min-width:62px }
@@ -1591,6 +1642,18 @@ html,body{
           </div>
         </div>
       </div>
+      <div class="daily-card" id="daily-card">
+        <div class="daily-left">
+          <div class="daily-kicker">Daily Challenge</div>
+          <div class="daily-title" id="daily-title">Stage <span id="daily-stage">\u2014</span></div>
+          <div class="daily-meta">
+            <span id="daily-status">Not started</span>
+            <span class="daily-dot">\u00b7</span>
+            <span id="daily-streak">0 day streak</span>
+          </div>
+        </div>
+        <button class="btn btn-primary daily-play" id="daily-play">Play Daily<span class="arrow"> &rarr;</span></button>
+      </div>
       <div class="panel-label panel-label-row">
         <span>Pick a stage</span>
         <div class="diff-toggle" role="group" aria-label="Difficulty">
@@ -1740,7 +1803,8 @@ const Storage = (function(){
     difficulty: 'normal',
     muted: false,
     playerName: '',
-    seenTutorial: false
+    seenTutorial: false,
+    dailies: {}       // YYYY-MM-DD -> { levelId, bestTime, bestStars, completions }
   };
   let state = null;
   function load(){
@@ -1752,7 +1816,61 @@ const Storage = (function(){
     if(!state.levelsHard) state.levelsHard = {};
     if(state.difficulty !== 'hard') state.difficulty = 'normal';
     if(state.playerName == null) state.playerName = '';
+    if(!state.dailies) state.dailies = {};
     return state;
+  }
+
+  // YYYY-MM-DD in the player's LOCAL timezone so streaks don't break when
+  // a player plays around midnight UTC.
+  function todayKey(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
+  // Stable seed from a date string. Maps the day to a level id in 1..N.
+  // Uses a simple FNV-1a-style hash; pure function, no network.
+  function dailyLevelFor(dateStr, levelCount){
+    let h = 2166136261 >>> 0;
+    for(let i = 0; i < dateStr.length; i++){
+      h ^= dateStr.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return (h % levelCount) + 1;
+  }
+
+  function recordDaily(dateStr, levelId, time, damage, stars){
+    const s = get();
+    const prev = s.dailies[dateStr] || { levelId: levelId, bestTime: null, bestStars: 0, completions: 0 };
+    prev.levelId = levelId;
+    prev.bestTime = (prev.bestTime == null) ? time : Math.min(prev.bestTime, time);
+    prev.bestStars = Math.max(prev.bestStars || 0, stars);
+    prev.completions = (prev.completions || 0) + 1;
+    s.dailies[dateStr] = prev;
+    save();
+    return prev;
+  }
+
+  // Longest consecutive daily streak ending today (inclusive if today played).
+  function dailyStreak(){
+    const s = get();
+    const dates = Object.keys(s.dailies).sort();
+    if(dates.length === 0) return 0;
+    // Walk backwards from today, counting consecutive days.
+    let streak = 0;
+    const cursor = new Date();
+    for(let i = 0; i < 365; i++){
+      const y = cursor.getFullYear();
+      const m = String(cursor.getMonth() + 1).padStart(2, '0');
+      const d = String(cursor.getDate()).padStart(2, '0');
+      const key = y + '-' + m + '-' + d;
+      if(s.dailies[key]) streak++;
+      else break;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return streak;
   }
   function save(){
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
@@ -1831,7 +1949,7 @@ const Storage = (function(){
   // branch on s.difficulty themselves can just ask once.
   function activeLevels(){ return dictFor(get()); }
   function reset(){ state = Object.assign({}, defaults, { levels:{}, levelsHard:{} }); save(); }
-  return { load, get, recordWin, setMuted, reset, setPlayerName, resetProgress, setDifficulty, activeLevels, setTutorialSeen };
+  return { load, get, recordWin, setMuted, reset, setPlayerName, resetProgress, setDifficulty, activeLevels, setTutorialSeen, todayKey, dailyLevelFor, recordDaily, dailyStreak };
 })();
 
 /* ============================================================
@@ -3378,6 +3496,11 @@ const UI = (function(){
     failRetry:   document.getElementById('fail-retry'),
     tutorialOverlay: document.getElementById('tutorial-overlay'),
     tutorialGo:  document.getElementById('tutorial-go'),
+    dailyCard:   document.getElementById('daily-card'),
+    dailyStage:  document.getElementById('daily-stage'),
+    dailyStatus: document.getElementById('daily-status'),
+    dailyStreak: document.getElementById('daily-streak'),
+    dailyPlay:   document.getElementById('daily-play'),
     tip:         document.getElementById('tip'),
     flash:       document.getElementById('flash'),
     openLb:       document.getElementById('open-leaderboard'),
@@ -3496,6 +3619,7 @@ const UI = (function(){
   function showStart(onSelect){
     hide(el.winScreen); hide(el.failScreen); hide(el.hud);
     syncDifficultyToggle();
+    syncDailyCard();
     renderLevelGrid(onSelect);
     show(el.startScreen);
   }
@@ -3874,6 +3998,38 @@ const UI = (function(){
         handlers.difficultyChange(btn.getAttribute('data-diff'));
       });
     });
+    // Daily Challenge: single button that triggers loading today's level
+    // in daily mode (records go into a separate daily bucket).
+    el.dailyPlay.addEventListener('click', function(){
+      handlers.playDaily();
+    });
+  }
+
+  // Daily Challenge card: paints the stage picked for today + whether the
+  // player has already played it + the current streak. Called on every
+  // showStart() so coming back to the menu after a daily run updates the card.
+  function syncDailyCard(){
+    const today = Storage.todayKey();
+    const dailyId = Storage.dailyLevelFor(today, LEVELS.length);
+    const dailyLv = LEVELS.find(function(l){ return l.id === dailyId; });
+    if(!dailyLv) return;
+    el.dailyStage.textContent = String(dailyId).padStart(2, '0') + ' \u00b7 ' + dailyLv.name;
+    const save = Storage.get();
+    const rec = save.dailies[today];
+    el.dailyStatus.classList.remove('daily-done');
+    if(rec && rec.bestTime != null){
+      el.dailyStatus.textContent = 'Done in ' + fmtTime(rec.bestTime);
+      el.dailyStatus.classList.add('daily-done');
+      el.dailyPlay.textContent = 'Replay Daily';
+    } else {
+      el.dailyStatus.textContent = 'Not started';
+      el.dailyPlay.textContent = 'Play Daily';
+    }
+    // Re-add arrow (textContent above cleared children).
+    const arrow = makeEl('span', 'arrow', ' \u2192');
+    el.dailyPlay.appendChild(arrow);
+    const streak = Storage.dailyStreak();
+    el.dailyStreak.textContent = streak === 1 ? '1 day streak' : streak + ' day streak';
   }
 
   // Update the Normal/Hard pill row to reflect whatever's in Storage.
@@ -3919,7 +4075,7 @@ const UI = (function(){
   }
 
   return {
-    showStart, startPlay, showWin, showFail, updateHUD, setMuted, setValetProgress, rebuildDamageSegments, syncDifficultyToggle, showTutorial,
+    showStart, startPlay, showWin, showFail, updateHUD, setMuted, setValetProgress, rebuildDamageSegments, syncDifficultyToggle, showTutorial, syncDailyCard,
     showTip, flash, bind, showLeaderboard, hideLeaderboard, renderLeaderboard
   };
 })();
@@ -3976,6 +4132,7 @@ const Game = (function(){
   // Hard:   tight (2 hits, 11px alignment tolerance).
   let damageMax = 3;
   let posOkDist = 15;
+  let dailyMode = false; // When true, wins are recorded to save.dailies[today] too.
   let shakeAmount = 0;
   let cameraX = 0, cameraY = 0;
   let dpr = 1;
@@ -4041,6 +4198,14 @@ const Game = (function(){
         UI.syncDifficultyToggle();
         // Re-render the menu so cards show the new difficulty's records.
         if(state === 'menu') gotoMenu();
+      },
+      playDaily: function(){
+        const today = Storage.todayKey();
+        const levelId = Storage.dailyLevelFor(today, LEVELS.length);
+        const idx = LEVELS.findIndex(function(l){ return l.id === levelId; });
+        if(idx < 0) return;
+        dailyMode = true;
+        loadLevel(idx);
       }
     });
 
@@ -4050,6 +4215,7 @@ const Game = (function(){
 
   function gotoMenu(){
     state = 'menu';
+    dailyMode = false; // Leaving a level clears the daily flag.
     Audio.stopEngine();
     UI.showStart(function(id){
       const idx = LEVELS.findIndex(function(l){ return l.id === id; });
@@ -4655,6 +4821,11 @@ const Game = (function(){
       a: Math.round(player.angle * 1000) / 1000
     });
     const result = Storage.recordWin(level.id, timer, damage, recordingGhost);
+    // Daily challenge: also record into today's daily bucket so the streak
+    // counter ticks up and the card on the start screen flips to "Done".
+    if(dailyMode){
+      Storage.recordDaily(Storage.todayKey(), level.id, timer, damage, result.stars);
+    }
     UI.showWin({
       levelId: level.id,
       stars: result.stars,
