@@ -328,6 +328,45 @@ html,body{
   width:100%;
   animation: fadeUp 0.6s var(--ease-out) 0.15s backwards;
 }
+.circuit-row{
+  display:grid;
+  grid-template-columns: 90px 1fr;
+  gap:22px;
+  align-items:center;
+  padding:22px 32px 14px;
+  background:var(--bg-2);
+  border-bottom:1px solid var(--line);
+  border-top:1px solid var(--line);
+}
+.circuit-row:first-child{ border-top:none }
+.circuit-num{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:0.32em;
+  color:var(--pink-ink);
+  font-weight:600;
+}
+.circuit-num::before{ content:"CIRCUIT " }
+.circuit-text{ min-width:0 }
+.circuit-name{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-size:34px;
+  letter-spacing:0.01em;
+  color:var(--ink);
+  transform:skewX(var(--skew));
+  display:inline-block;
+  line-height:1;
+}
+.circuit-blurb{
+  font-family:var(--font-body);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--ink-2);
+  margin-top:6px;
+}
 .level-card{
   display:grid;
   grid-template-columns: 90px 1fr auto auto;
@@ -1160,6 +1199,10 @@ html,body{
   }
   .level-card .n{ font-size:44px }
   .level-card .nm{ font-size:22px }
+  .circuit-row{ grid-template-columns: 64px 1fr; padding:18px 20px 12px; gap:16px }
+  .circuit-num{ font-size:10px; letter-spacing:0.26em }
+  .circuit-name{ font-size:26px }
+  .circuit-blurb{ font-size:10px }
   .level-card .stars{ grid-column: 2 }
   .level-card .meta{ grid-column: 3; grid-row: 1 / span 2; min-width:60px; font-size:14px }
   .level-card .lock{ grid-column: 3; padding:5px 12px; font-size:9px }
@@ -1220,6 +1263,9 @@ html,body{
   .level-card{ padding:14px 14px; gap:12px; grid-template-columns: 54px 1fr auto }
   .level-card .n{ font-size:38px }
   .level-card .nm{ font-size:18px }
+  .circuit-row{ grid-template-columns: 54px 1fr; padding:14px 14px 10px; gap:12px }
+  .circuit-name{ font-size:22px }
+  .circuit-blurb{ font-size:9px; letter-spacing:0.08em }
   .level-card .desc{ font-size:10px; letter-spacing:0.04em }
   .level-card .meta{ font-size:12px; min-width:52px }
   .level-card .lock{ padding:4px 10px; font-size:8px; letter-spacing:0.22em; min-width:62px }
@@ -2120,8 +2166,22 @@ const Collision = (function(){
 })();
 
 /* ============================================================
-   LEVEL DATA — five hand-tuned levels, data-driven
-   Adding a sixth level = appending one object to this array.
+   CIRCUITS — the campaign is grouped into themed worlds so the
+   level select feels like progression through chapters, not a
+   flat scrolling list. Add a level to LEVELS, add its id to the
+   relevant circuit's `levels` array, and the UI picks it up.
+   ============================================================ */
+const CIRCUITS = [
+  { id: 1, name: 'Rookie',    blurb: 'Learn the basics',              levels: [1, 2, 3, 4] },
+  { id: 2, name: 'Rush Hour', blurb: 'Traffic, tight lanes, ice',     levels: [5, 6, 7] },
+  { id: 3, name: 'Precision', blurb: 'Barriers, roundabouts, valet',  levels: [8, 9, 10] },
+  { id: 4, name: 'After Dark',blurb: 'Weather and darkness',          levels: [11] }
+];
+
+/* ============================================================
+   LEVEL DATA — hand-tuned levels, data-driven
+   Adding a level = append an object here + include its id in a
+   circuit in the CIRCUITS array above.
    ============================================================ */
 const LEVELS = [
   {
@@ -2869,53 +2929,86 @@ const UI = (function(){
   function renderLevelGrid(onSelect){
     const save = Storage.get();
     clear(el.levelGrid);
-    LEVELS.forEach(function(lv, idx){
-      const locked = (idx + 1) > save.unlocked;
-      const rec = save.levels[lv.id] || {};
-      const btn = document.createElement('button');
-      btn.className = 'level-card' + (locked ? ' locked' : '');
-      btn.disabled = locked;
-
-      btn.appendChild(makeEl('div', 'n', String(lv.id).padStart(2, '0')));
-
-      const body = makeEl('div', 'body');
-      body.appendChild(makeEl('div', 'nm', lv.name));
-      const descText = lv.desc || (lv.tip ? lv.tip : '');
-      if(descText) body.appendChild(makeEl('div', 'desc', descText));
-      btn.appendChild(body);
-
-      // Locked cards skip stars + meta and show a single "Locked" cell instead.
-      // Showing empty outlined stars for levels you haven't played is noise, and
-      // the absolute-positioned pill used to collide with the stars column.
-      if(locked){
-        btn.appendChild(makeEl('div', 'lock', 'Locked'));
-      } else {
-        const stars = rec.bestStars || 0;
-        const starsRow = makeEl('div', 'stars');
-        for(let i = 0; i < 3; i++){
-          starsRow.appendChild(makeEl('span', 'star' + (stars > i ? ' on' : ''), '\u2605'));
-        }
-        btn.appendChild(starsRow);
-        btn.appendChild(makeEl('div', 'meta', rec.bestTime != null ? fmtTime(rec.bestTime) : '\u2014'));
-      }
-
-      btn.addEventListener('click', function(){ if(!locked) onSelect(lv.id); });
-      el.levelGrid.appendChild(btn);
+    // Walk circuits in order, emitting a header + its levels. A level that
+    // somehow isn't in any circuit (orphan) still shows up at the end under
+    // a "Bonus" header so nothing silently disappears from the UI.
+    const seen = {};
+    CIRCUITS.forEach(function(circuit, cidx){
+      const lvs = circuit.levels.map(function(id){ seen[id] = true; return findLevel(id); }).filter(Boolean);
+      if(lvs.length === 0) return;
+      appendCircuitHeader(circuit, cidx);
+      lvs.forEach(function(lv){ appendLevelCard(lv, save, onSelect); });
     });
-    // Masthead stages-cleared counter
-    const mast = document.getElementById('mast-count');
-    if(mast){
-      let cleared = 0;
-      for(let i = 0; i < LEVELS.length; i++){
-        const r = save.levels[LEVELS[i].id];
-        if(r && (r.bestStars || 0) >= 1) cleared++;
-      }
-      clear(mast);
-      mast.appendChild(document.createTextNode(String(cleared).padStart(2, '0')));
-      const slash = makeEl('span', 'slash', '/');
-      mast.appendChild(slash);
-      mast.appendChild(document.createTextNode(String(LEVELS.length).padStart(2, '0')));
+    const orphans = LEVELS.filter(function(l){ return !seen[l.id]; });
+    if(orphans.length){
+      appendCircuitHeader({ id: 99, name: 'Bonus', blurb: 'Unclassified stages' }, CIRCUITS.length);
+      orphans.forEach(function(lv){ appendLevelCard(lv, save, onSelect); });
     }
+    updateMastCount(save);
+  }
+
+  function findLevel(id){
+    for(let i = 0; i < LEVELS.length; i++) if(LEVELS[i].id === id) return LEVELS[i];
+    return null;
+  }
+
+  function appendCircuitHeader(circuit, cidx){
+    const row = makeEl('div', 'circuit-row');
+    row.appendChild(makeEl('div', 'circuit-num', String(cidx + 1).padStart(2, '0')));
+    const text = makeEl('div', 'circuit-text');
+    text.appendChild(makeEl('div', 'circuit-name', circuit.name));
+    if(circuit.blurb) text.appendChild(makeEl('div', 'circuit-blurb', circuit.blurb));
+    row.appendChild(text);
+    el.levelGrid.appendChild(row);
+  }
+
+  function updateMastCount(save){
+    const mast = document.getElementById('mast-count');
+    if(!mast) return;
+    let cleared = 0;
+    for(let i = 0; i < LEVELS.length; i++){
+      const r = save.levels[LEVELS[i].id];
+      if(r && (r.bestStars || 0) >= 1) cleared++;
+    }
+    clear(mast);
+    mast.appendChild(document.createTextNode(String(cleared).padStart(2, '0')));
+    mast.appendChild(makeEl('span', 'slash', '/'));
+    mast.appendChild(document.createTextNode(String(LEVELS.length).padStart(2, '0')));
+  }
+
+  function appendLevelCard(lv, save, onSelect){
+    const idx = LEVELS.indexOf(lv);
+    const locked = (idx + 1) > save.unlocked;
+    const rec = save.levels[lv.id] || {};
+    const btn = document.createElement('button');
+    btn.className = 'level-card' + (locked ? ' locked' : '');
+    btn.disabled = locked;
+
+    btn.appendChild(makeEl('div', 'n', String(lv.id).padStart(2, '0')));
+
+    const body = makeEl('div', 'body');
+    body.appendChild(makeEl('div', 'nm', lv.name));
+    const descText = lv.desc || (lv.tip ? lv.tip : '');
+    if(descText) body.appendChild(makeEl('div', 'desc', descText));
+    btn.appendChild(body);
+
+    // Locked cards skip stars + meta and show a single "Locked" cell instead.
+    // Showing empty outlined stars for levels you haven't played is noise, and
+    // the absolute-positioned pill used to collide with the stars column.
+    if(locked){
+      btn.appendChild(makeEl('div', 'lock', 'Locked'));
+    } else {
+      const stars = rec.bestStars || 0;
+      const starsRow = makeEl('div', 'stars');
+      for(let i = 0; i < 3; i++){
+        starsRow.appendChild(makeEl('span', 'star' + (stars > i ? ' on' : ''), '\u2605'));
+      }
+      btn.appendChild(starsRow);
+      btn.appendChild(makeEl('div', 'meta', rec.bestTime != null ? fmtTime(rec.bestTime) : '\u2014'));
+    }
+
+    btn.addEventListener('click', function(){ if(!locked) onSelect(lv.id); });
+    el.levelGrid.appendChild(btn);
   }
 
   function showStart(onSelect){
