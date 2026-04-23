@@ -841,24 +841,30 @@ html,body{
 .pod{
   background:var(--bg);
   border:3px solid var(--ink);
-  padding:18px 16px 16px;
+  padding:16px 14px 16px;
   text-align:center;position:relative;
   transition: transform 0.2s ease;
+  min-width:0;
+  overflow:hidden;
 }
 .pod:hover{ transform: translateY(-3px) }
+/* Rank label — inline so it never overflows the card horizontally.
+   (Used to be absolute-positioned, which got clipped at the box's
+    right edge since overflow-y:auto forces overflow-x to auto too.) */
 .pod .p-rank{
-  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  display:inline-block;
   font-family:var(--font-body);font-weight:800;font-size:10px;
-  letter-spacing:0.24em;text-transform:uppercase;
-  padding:5px 12px;border:2px solid var(--ink);
+  letter-spacing:0.22em;text-transform:uppercase;
+  padding:5px 11px;border:2px solid var(--ink);
   box-shadow: 2px 2px 0 var(--ink);
   white-space:nowrap;
+  margin-bottom:14px;
 }
 .pod.p1{
   background:var(--pink);
   border-width:4px;
   box-shadow: 6px 6px 0 var(--ink);
-  padding-top:26px;padding-bottom:22px;
+  padding:20px 14px 20px;
 }
 .pod.p1 .p-rank{ background:var(--ink);color:var(--yellow);border-color:var(--ink) }
 .pod.p1 .p-name{ color:var(--bg) }
@@ -866,25 +872,32 @@ html,body{
 .pod.p1 .p-loc{ color:rgba(244,234,216,0.8) }
 .pod.p2 .p-rank{ background:var(--bg); color:var(--ink) }
 .pod.p3 .p-rank{ background:var(--gold); color:var(--ink) }
+/* Avatar — flex (not inline-flex) so it centers via auto margins
+   and forces the name below onto its own row. */
 .pod .p-avatar{
   width:54px;height:54px;
   background:var(--bg-3);
   border:2px solid var(--ink);
-  display:inline-flex;align-items:center;justify-content:center;
+  display:flex;align-items:center;justify-content:center;
   font-family:var(--font-display);font-style:italic;
   font-size:22px;line-height:1;
   transform:skewX(var(--skew));
   margin:0 auto 10px;
   box-shadow: 2px 2px 0 var(--ink);
+  flex-shrink:0;
 }
 .pod .p-avatar span{ transform:skewX(calc(var(--skew) * -1));display:inline-block }
 .pod.p1 .p-avatar{ background:var(--bg);border-color:var(--ink) }
+/* Name — block on its own row, truncates with ellipsis if the
+   driver has a very long name. */
 .pod .p-name{
+  display:block;
   font-family:var(--font-display);font-style:italic;
-  font-size:22px;line-height:0.95;color:var(--ink);
+  font-size:20px;line-height:0.95;color:var(--ink);
   text-transform:uppercase;letter-spacing:-0.005em;
-  transform:skewX(var(--skew));display:inline-block;
-  max-width:100%;overflow:hidden;text-overflow:ellipsis;
+  transform:skewX(var(--skew));
+  padding:0 2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .pod .p-loc{
   display:flex;justify-content:center;align-items:center;gap:5px;
@@ -2805,7 +2818,12 @@ const UI = (function(){
 
   function renderLeaderboard(){
     const save = Storage.get();
-    el.nameInput.value = save.playerName || '';
+    // Only sync the input's value when it's not focused. Setting .value
+    // while the user is typing would reset the cursor to the end on
+    // every keystroke (feels like the input is "lagging").
+    if(document.activeElement !== el.nameInput){
+      el.nameInput.value = save.playerName || '';
+    }
 
     // 1. Your Progress strip — mini card per level
     clear(el.lbProgress);
@@ -3080,7 +3098,14 @@ const Game = (function(){
           UI.renderLeaderboard();
         }
       },
-      nameChange: function(name){ Storage.setPlayerName(name); }
+      nameChange: function(name){
+        // Persist the new name, then refresh the leaderboard so the
+        // YOU row reflects the typed name immediately. renderLeaderboard
+        // leaves the input alone while it is focused so the cursor
+        // doesn't jump back to the end on each keystroke.
+        Storage.setPlayerName(name);
+        UI.renderLeaderboard();
+      }
     });
 
     gotoMenu();
